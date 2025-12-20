@@ -131,9 +131,7 @@ struct MenuContentView: View {
                     isSelected: provider == selectedProvider,
                     hasData: appState.snapshots[provider] != nil
                 ) {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        selectedProvider = provider
-                    }
+                    selectedProvider = provider
                 }
             }
         }
