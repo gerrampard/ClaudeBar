@@ -7,7 +7,7 @@
     <key>CFBundleExecutable</key>
     <string>ClaudeBar</string>
     <key>CFBundleIconFile</key>
-    <string></string>
+    <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>com.tddworks.claudebar</string>
     <key>CFBundleInfoDictionaryVersion</key>

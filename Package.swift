@@ -55,6 +55,13 @@ let package = Package(
                 .product(name: "Sparkle", package: "Sparkle"),
             ],
             path: "Sources/App",
+            exclude: [
+                "Info.plist",
+                "entitlements.plist",
+            ],
+            resources: [
+                .process("Assets.xcassets"),
+            ],
             swiftSettings: [
                 .enableUpcomingFeature("StrictConcurrency"),
                 .define("ENABLE_SPARKLE"),
