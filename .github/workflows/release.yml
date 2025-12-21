@@ -141,15 +141,31 @@ jobs:
           KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
           KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
 
-          # Create file with restrictive permissions before writing secret
+          # Validate secrets are set
+          if [ -z "$APPLE_CERTIFICATE_P12" ]; then
+            echo "Error: APPLE_CERTIFICATE_P12 secret is not set"
+            exit 1
+          fi
+
+          # Decode certificate
           touch "$CERT_PATH" && chmod 600 "$CERT_PATH"
           echo "$APPLE_CERTIFICATE_P12" | base64 --decode > "$CERT_PATH"
           echo "CERT_PATH=$CERT_PATH" >> $GITHUB_ENV
 
+          # Verify the .p12 file is valid
+          if ! openssl pkcs12 -in "$CERT_PATH" -passin pass:"$APPLE_CERTIFICATE_PASSWORD" -noout 2>/dev/null; then
+            echo "Error: Invalid .p12 file or wrong password"
+            echo "Make sure APPLE_CERTIFICATE_P12 is base64-encoded and APPLE_CERTIFICATE_PASSWORD is correct"
+            exit 1
+          fi
+          echo "Certificate file validated"
+
+          # Create and configure keychain
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
+          # Import certificate
           security import "$CERT_PATH" \
             -P "$APPLE_CERTIFICATE_PASSWORD" \
             -A \
@@ -157,21 +173,27 @@ jobs:
             -f pkcs12 \
             -k "$KEYCHAIN_PATH"
 
+          # Add keychain to search list
           security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+          # Allow codesign to access the key without UI prompt
           security set-key-partition-list \
-            -S apple-tool:,apple: \
+            -S apple-tool:,apple:,codesign: \
+            -s \
             -k "$KEYCHAIN_PASSWORD" \
             "$KEYCHAIN_PATH"
 
           # Find and store the signing identity
+          echo "Available signing identities:"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
           IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID Application" | head -1 | awk -F '"' '{print $2}')
           if [ -z "$IDENTITY" ]; then
             echo "Error: No Developer ID Application certificate found"
-            security find-identity -v -p codesigning "$KEYCHAIN_PATH"
             exit 1
           fi
 
-          echo "Found signing identity: $IDENTITY"
+          echo "Using signing identity: $IDENTITY"
           echo "SIGNING_IDENTITY=$IDENTITY" >> $GITHUB_ENV
           echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> $GITHUB_ENV
           echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> $GITHUB_ENV
