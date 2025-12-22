@@ -11,7 +11,6 @@ struct MenuContentView: View {
     @State private var selectedProviderId: String = "claude"
     @State private var isHoveringRefresh = false
     @State private var animateIn = false
-    @State private var refreshingProviders: Set<String> = []
 
     /// The currently selected provider
     private var selectedProvider: (any AIProvider)? {
@@ -369,16 +368,12 @@ struct MenuContentView: View {
 
     /// Refresh a specific provider by ID
     private func refresh(providerId: String) async {
-        // Prevent duplicate refreshes for the same provider
-        guard !refreshingProviders.contains(providerId) else { return }
-
-        refreshingProviders.insert(providerId)
-
-        // Call the provider's refresh directly (providers are observable)
         guard let provider = appState.providers.first(where: { $0.id == providerId }) else {
-            refreshingProviders.remove(providerId)
             return
         }
+
+        // Provider.isSyncing is observable - prevents duplicate refreshes
+        guard !provider.isSyncing else { return }
 
         do {
             try await provider.refresh()
@@ -386,8 +381,6 @@ struct MenuContentView: View {
         } catch {
             appState.lastError = error.localizedDescription
         }
-
-        refreshingProviders.remove(providerId)
     }
 }
 

@@ -190,7 +190,7 @@ public struct CodexUsageProbe: UsageProbe {
         }
 
         if lower.contains("update available") && lower.contains("codex") {
-            return .updateRequired("Codex CLI update required")
+            return .updateRequired
         }
 
         return nil

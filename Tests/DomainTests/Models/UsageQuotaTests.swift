@@ -12,19 +12,19 @@ struct UsageQuotaTests {
         // Given
         let percentRemaining = 65.0
         let quotaType = QuotaType.session
-        let provider = AIProvider.claude
+        let providerId = "claude"
 
         // When
         let quota = UsageQuota(
             percentRemaining: percentRemaining,
             quotaType: quotaType,
-            provider: provider
+            providerId: providerId
         )
 
         // Then
         #expect(quota.percentRemaining == 65)
-        #expect(quota.quotaType == .session)
-        #expect(quota.provider == .claude)
+        #expect(quota.quotaType == QuotaType.session)
+        #expect(quota.providerId == "claude")
     }
 
     @Test

@@ -3,8 +3,8 @@ import UserNotifications
 import Domain
 
 /// Infrastructure adapter that sends macOS notifications when quota status changes.
-/// Implements QuotaObserverPort from the domain layer.
-public final class NotificationQuotaObserver: QuotaObserverPort, @unchecked Sendable {
+/// Implements StatusChangeObserver from the domain layer.
+public final class NotificationQuotaObserver: StatusChangeObserver, @unchecked Sendable {
     /// Lazily initialized notification center to avoid bundle issues during init
     private var notificationCenter: UNUserNotificationCenter? {
         // Only access notification center when running in a proper app context
@@ -24,11 +24,7 @@ public final class NotificationQuotaObserver: QuotaObserverPort, @unchecked Send
         }
     }
 
-    // MARK: - QuotaObserverPort
-
-    public func onSnapshotUpdated(_ snapshot: UsageSnapshot) async {
-        // No notification needed for regular updates
-    }
+    // MARK: - StatusChangeObserver
 
     public func onStatusChanged(providerId: String, oldStatus: QuotaStatus, newStatus: QuotaStatus) async {
         // Only notify on degradation (getting worse)
@@ -58,33 +54,6 @@ public final class NotificationQuotaObserver: QuotaObserverPort, @unchecked Send
             try await center.add(request)
         } catch {
             // Silently fail - notifications are non-critical
-        }
-    }
-
-    public func onError(_ error: Error, providerId: String) async {
-        // Optionally notify on persistent errors
-        guard let probeError = error as? ProbeError else { return }
-
-        let providerName = providerDisplayName(for: providerId)
-
-        // Only notify for authentication issues
-        switch probeError {
-        case .authenticationRequired:
-            let content = UNMutableNotificationContent()
-            content.title = "\(providerName) Login Required"
-            content.body = "Please log in to \(providerName) to continue monitoring quotas."
-            content.sound = .default
-
-            let request = UNNotificationRequest(
-                identifier: "auth-\(providerId)",
-                content: content,
-                trigger: nil
-            )
-
-            guard let center = notificationCenter else { return }
-            try? await center.add(request)
-        default:
-            break
         }
     }
 

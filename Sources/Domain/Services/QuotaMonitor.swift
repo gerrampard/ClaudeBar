@@ -10,13 +10,13 @@ public enum MonitoringEvent: Sendable {
 
 /// The main domain service that coordinates quota monitoring across AI providers.
 /// Providers are rich domain models that own their own snapshots.
-/// QuotaMonitor coordinates refreshes and notifies observers.
+/// QuotaMonitor coordinates refreshes and optionally notifies status observers.
 public actor QuotaMonitor {
     /// All registered providers
     private let providers: [any AIProvider]
 
-    /// Observer to notify of updates
-    private let observer: any QuotaObserverPort
+    /// Optional observer for status changes (e.g., for system notifications)
+    private let statusObserver: (any StatusChangeObserver)?
 
     /// Previous status for change detection
     private var previousStatuses: [String: QuotaStatus] = [:]
@@ -31,10 +31,10 @@ public actor QuotaMonitor {
 
     public init(
         providers: [any AIProvider],
-        observer: any QuotaObserverPort = NoOpQuotaObserver()
+        statusObserver: (any StatusChangeObserver)? = nil
     ) {
         self.providers = providers
-        self.observer = observer
+        self.statusObserver = statusObserver
     }
 
     // MARK: - Monitoring Operations
@@ -61,22 +61,19 @@ public actor QuotaMonitor {
             let snapshot = try await provider.refresh()
             await handleSnapshotUpdate(provider: provider, snapshot: snapshot)
         } catch {
-            await observer.onError(error, providerId: provider.id)
+            // Provider stores error in lastError - no need for external observer
         }
     }
 
-    /// Handles snapshot update and notifies observers of changes
+    /// Handles snapshot update and notifies status observer if status changed
     private func handleSnapshotUpdate(provider: any AIProvider, snapshot: UsageSnapshot) async {
         let previousStatus = previousStatuses[provider.id] ?? .healthy
         let newStatus = snapshot.overallStatus
 
         previousStatuses[provider.id] = newStatus
 
-        // Notify observer of snapshot update
-        await observer.onSnapshotUpdated(snapshot)
-
-        // Notify if status changed
-        if previousStatus != newStatus {
+        // Notify observer only if status changed
+        if previousStatus != newStatus, let observer = statusObserver {
             await observer.onStatusChanged(
                 providerId: provider.id,
                 oldStatus: previousStatus,

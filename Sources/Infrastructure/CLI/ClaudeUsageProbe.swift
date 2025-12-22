@@ -279,7 +279,7 @@ public struct ClaudeUsageProbe: UsageProbe {
         let lower = text.lowercased()
 
         if lower.contains("do you trust the files in this folder?"), !lower.contains("current session") {
-            return .folderTrustRequired(extractFolderFromTrustPrompt(text) ?? "unknown")
+            return .folderTrustRequired
         }
 
         if lower.contains("token_expired") || lower.contains("token has expired") {

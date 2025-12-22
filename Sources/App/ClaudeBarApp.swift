@@ -56,7 +56,7 @@ struct ClaudeBarApp: App {
         // Initialize the domain service with notification observer
         _monitor = State(initialValue: QuotaMonitor(
             providers: providers,
-            observer: notificationObserver
+            statusObserver: notificationObserver
         ))
 
         // Request notification permission
