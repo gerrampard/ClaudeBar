@@ -626,6 +626,15 @@ extension QuotaStatus {
         case .depleted: "EMPTY"
         }
     }
+
+    /// Simple display color for status indicators (moved from Domain to keep Domain SwiftUI-free)
+    var displayColor: Color {
+        switch self {
+        case .healthy: .green
+        case .warning: .orange
+        case .critical, .depleted: .red
+        }
+    }
 }
 
 // MARK: - Theme Switcher Button

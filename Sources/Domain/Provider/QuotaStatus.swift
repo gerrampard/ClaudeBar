@@ -55,18 +55,3 @@ public enum QuotaStatus: Sendable, Equatable, Hashable, Comparable {
         lhs.severity < rhs.severity
     }
 }
-
-// MARK: - SwiftUI Integration
-
-import SwiftUI
-
-extension QuotaStatus {
-    /// The color to display for this status
-    public var displayColor: Color {
-        switch self {
-        case .healthy: .green
-        case .warning: .orange
-        case .critical, .depleted: .red
-        }
-    }
-}

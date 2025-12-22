@@ -153,23 +153,10 @@ struct MenuContentView: View {
     private var statusBadge: some View {
         HStack(spacing: 6) {
             // Animated pulse dot
-            ZStack {
-                Circle()
-                    .fill(selectedProviderStatus.themeColor(for: colorScheme))
-                    .frame(width: 8, height: 8)
-
-                Circle()
-                    .stroke(selectedProviderStatus.themeColor(for: colorScheme), lineWidth: 2)
-                    .frame(width: 16, height: 16)
-                    .scaleEffect(isSelectedProviderSyncing ? 1.5 : 1.0)
-                    .opacity(isSelectedProviderSyncing ? 0 : 0.5)
-                    .animation(
-                        isSelectedProviderSyncing
-                            ? .easeOut(duration: 1.0).repeatForever(autoreverses: false)
-                            : .default,
-                        value: isSelectedProviderSyncing
-                    )
-            }
+            PulsingStatusDot(
+                color: selectedProviderStatus.themeColor(for: colorScheme),
+                isSyncing: isSelectedProviderSyncing
+            )
 
             Text(statusText)
                 .font(AppTheme.captionFont(size: 11))
@@ -734,5 +721,64 @@ extension LinearGradient {
     var stops: [Gradient.Stop] {
         // Default empty - used for animation color extraction
         []
+    }
+}
+
+// MARK: - Pulsing Status Dot
+
+/// A status dot that pulses when syncing, with proper animation lifecycle management.
+struct PulsingStatusDot: View {
+    let color: Color
+    let isSyncing: Bool
+
+    @State private var pulsePhase: CGFloat = 0
+
+    var body: some View {
+        ZStack {
+            // Solid center dot
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+
+            // Pulsing ring (only visible when syncing)
+            if isSyncing {
+                Circle()
+                    .stroke(color, lineWidth: 2)
+                    .frame(width: 16, height: 16)
+                    .scaleEffect(1 + pulsePhase * 0.5)
+                    .opacity(1 - pulsePhase)
+            } else {
+                // Static ring when not syncing
+                Circle()
+                    .stroke(color, lineWidth: 2)
+                    .frame(width: 16, height: 16)
+                    .opacity(0.5)
+            }
+        }
+        .onChange(of: isSyncing) { _, syncing in
+            if syncing {
+                startPulsing()
+            } else {
+                stopPulsing()
+            }
+        }
+        .onAppear {
+            if isSyncing {
+                startPulsing()
+            }
+        }
+    }
+
+    private func startPulsing() {
+        pulsePhase = 0
+        withAnimation(.easeOut(duration: 1.0).repeatForever(autoreverses: false)) {
+            pulsePhase = 1
+        }
+    }
+
+    private func stopPulsing() {
+        withAnimation(.easeOut(duration: 0.3)) {
+            pulsePhase = 0
+        }
     }
 }
