@@ -78,18 +78,13 @@ struct ProviderIconView: View {
     private func loadProviderIcon(for providerId: String) -> NSImage? {
         let assetName = AppTheme.providerIconAssetName(for: providerId)
 
-        // Try Asset Catalog first (works with Xcode builds)
-        if let image = NSImage(named: assetName) {
-            return image
+        // Try SVG from resource bundle (for SPM builds)
+        if let url = ResourceBundle.bundle.url(forResource: assetName, withExtension: "svg") {
+            return NSImage(contentsOf: url)
         }
 
         // Try PNG from resource bundle (for SPM builds)
         if let url = ResourceBundle.bundle.url(forResource: assetName, withExtension: "png") {
-            return NSImage(contentsOf: url)
-        }
-
-        // Try SVG from resource bundle (for SPM builds)
-        if let url = ResourceBundle.bundle.url(forResource: assetName, withExtension: "svg") {
             return NSImage(contentsOf: url)
         }
 
