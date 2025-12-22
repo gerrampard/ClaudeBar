@@ -148,7 +148,7 @@ public struct CodexUsageProbe: UsageProbe {
 
     // MARK: - Text Parsing Helpers
 
-    private static func stripANSICodes(_ text: String) -> String {
+    internal static func stripANSICodes(_ text: String) -> String {
         let pattern = #"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])"#
         return text.replacingOccurrences(of: pattern, with: "", options: .regularExpression)
     }
@@ -182,7 +182,7 @@ public struct CodexUsageProbe: UsageProbe {
         return Int(line[valRange])
     }
 
-    private static func extractUsageError(_ text: String) -> ProbeError? {
+    internal static func extractUsageError(_ text: String) -> ProbeError? {
         let lower = text.lowercased()
 
         if lower.contains("data not available yet") {
@@ -196,7 +196,7 @@ public struct CodexUsageProbe: UsageProbe {
         return nil
     }
 
-    private func mapRunError(_ error: PTYCommandRunner.RunError) -> ProbeError {
+    internal func mapRunError(_ error: PTYCommandRunner.RunError) -> ProbeError {
         switch error {
         case .binaryNotFound(let bin):
             .cliNotFound(bin)

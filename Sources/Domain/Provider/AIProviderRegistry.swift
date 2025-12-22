@@ -24,6 +24,13 @@ public final class AIProviderRegistry: @unchecked Sendable {
         }
     }
 
+    /// Clears all registered providers
+    public func reset() {
+        lock.withLock {
+            _providers = []
+        }
+    }
+
     // MARK: - All Providers
 
     /// All registered providers

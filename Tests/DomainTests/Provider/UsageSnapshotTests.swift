@@ -197,6 +197,7 @@ struct UsageSnapshotTests {
     func `snapshot can lookup its provider from registry`() {
         // Given - register providers
         let claude = ClaudeProvider(probe: MockUsageProbe())
+        AIProviderRegistry.shared.reset()
         AIProviderRegistry.shared.register([claude])
 
         // When - create snapshot for registered provider
@@ -211,6 +212,7 @@ struct UsageSnapshotTests {
     @Test
     func `snapshot returns nil for unregistered provider`() {
         // Given - empty registry
+        AIProviderRegistry.shared.reset()
         AIProviderRegistry.shared.register([])
 
         // When - create snapshot for unknown provider
@@ -226,6 +228,7 @@ struct UsageSnapshotTests {
         let claude = ClaudeProvider(probe: MockUsageProbe())
         let codex = CodexProvider(probe: MockUsageProbe())
         let gemini = GeminiProvider(probe: MockUsageProbe())
+        AIProviderRegistry.shared.reset()
         AIProviderRegistry.shared.register([claude, codex, gemini])
 
         // When - create snapshot for codex

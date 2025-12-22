@@ -133,12 +133,12 @@ public struct ClaudeUsageProbe: UsageProbe {
 
     // MARK: - Text Parsing Helpers
 
-    private func stripANSICodes(_ text: String) -> String {
+    internal func stripANSICodes(_ text: String) -> String {
         let pattern = #"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])"#
         return text.replacingOccurrences(of: pattern, with: "", options: .regularExpression)
     }
 
-    private func extractPercent(labelSubstring: String, text: String) -> Int? {
+    internal func extractPercent(labelSubstring: String, text: String) -> Int? {
         let lines = text.components(separatedBy: .newlines)
         let label = labelSubstring.lowercased()
 
@@ -153,7 +153,7 @@ public struct ClaudeUsageProbe: UsageProbe {
         return nil
     }
 
-    private func extractPercent(labelSubstrings: [String], text: String) -> Int? {
+    internal func extractPercent(labelSubstrings: [String], text: String) -> Int? {
         for label in labelSubstrings {
             if let value = extractPercent(labelSubstring: label, text: text) {
                 return value
@@ -162,7 +162,7 @@ public struct ClaudeUsageProbe: UsageProbe {
         return nil
     }
 
-    private func percentFromLine(_ line: String) -> Int? {
+    internal func percentFromLine(_ line: String) -> Int? {
         let pattern = #"([0-9]{1,3})\s*%\s*(used|left)"#
         guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
             return nil
@@ -179,7 +179,7 @@ public struct ClaudeUsageProbe: UsageProbe {
         return isUsed ? max(0, 100 - rawVal) : rawVal
     }
 
-    private func extractReset(labelSubstring: String, text: String) -> String? {
+    internal func extractReset(labelSubstring: String, text: String) -> String? {
         let lines = text.components(separatedBy: .newlines)
         let label = labelSubstring.lowercased()
 
@@ -197,22 +197,22 @@ public struct ClaudeUsageProbe: UsageProbe {
         return nil
     }
 
-    private func extractEmail(text: String) -> String? {
+    internal func extractEmail(text: String) -> String? {
         let pattern = #"(?i)(?:Account|Email):\s*([^\s@]+@[^\s@]+)"#
         return extractFirst(pattern: pattern, text: text)
     }
 
-    private func extractOrganization(text: String) -> String? {
+    internal func extractOrganization(text: String) -> String? {
         let pattern = #"(?i)(?:Org|Organization):\s*(.+)"#
         return extractFirst(pattern: pattern, text: text)
     }
 
-    private func extractLoginMethod(text: String) -> String? {
+    internal func extractLoginMethod(text: String) -> String? {
         let pattern = #"(?i)login\s+method:\s*(.+)"#
         return extractFirst(pattern: pattern, text: text)
     }
 
-    private func extractFirst(pattern: String, text: String) -> String? {
+    internal func extractFirst(pattern: String, text: String) -> String? {
         guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
             return nil
         }
@@ -225,7 +225,7 @@ public struct ClaudeUsageProbe: UsageProbe {
         return String(text[r]).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private func cleanResetText(_ text: String?) -> String? {
+    internal func cleanResetText(_ text: String?) -> String? {
         guard let text else { return nil }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
@@ -237,7 +237,7 @@ public struct ClaudeUsageProbe: UsageProbe {
         return "Resets \(trimmed)"
     }
 
-    private func parseResetDate(_ text: String?) -> Date? {
+    internal func parseResetDate(_ text: String?) -> Date? {
         guard let text else { return nil }
 
         var totalSeconds: TimeInterval = 0
@@ -275,7 +275,7 @@ public struct ClaudeUsageProbe: UsageProbe {
 
     // MARK: - Error Detection
 
-    private func extractUsageError(_ text: String) -> ProbeError? {
+    internal func extractUsageError(_ text: String) -> ProbeError? {
         let lower = text.lowercased()
 
         if lower.contains("do you trust the files in this folder?"), !lower.contains("current session") {
@@ -293,14 +293,14 @@ public struct ClaudeUsageProbe: UsageProbe {
         return nil
     }
 
-    private func extractFolderFromTrustPrompt(_ text: String) -> String? {
+    internal func extractFolderFromTrustPrompt(_ text: String) -> String? {
         let pattern = #"Do you trust the files in this folder\?\s*(?:\r?\n)+\s*([^\r\n]+)"#
         return extractFirst(pattern: pattern, text: text)
     }
 
     // MARK: - Helpers
 
-    private func probeWorkingDirectory() -> URL {
+    internal func probeWorkingDirectory() -> URL {
         let fm = FileManager.default
         let base = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first ?? fm.temporaryDirectory
         let dir = base
@@ -310,7 +310,7 @@ public struct ClaudeUsageProbe: UsageProbe {
         return dir
     }
 
-    private func mapRunError(_ error: PTYCommandRunner.RunError) -> ProbeError {
+    internal func mapRunError(_ error: PTYCommandRunner.RunError) -> ProbeError {
         switch error {
         case .binaryNotFound(let bin):
             .cliNotFound(bin)

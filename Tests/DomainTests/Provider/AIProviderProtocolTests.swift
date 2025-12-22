@@ -167,6 +167,7 @@ struct AIProviderRegistryTests {
 
     @Test
     func `registry lookup by id returns correct provider`() {
+        AIProviderRegistry.shared.reset()
         let registry = AIProviderRegistry.shared
         registry.register([
             ClaudeProvider(probe: MockUsageProbe()),
@@ -182,6 +183,7 @@ struct AIProviderRegistryTests {
 
     @Test
     func `registry lookup with invalid id returns nil`() {
+        AIProviderRegistry.shared.reset()
         let registry = AIProviderRegistry.shared
         registry.register([ClaudeProvider(probe: MockUsageProbe())])
 
@@ -194,6 +196,7 @@ struct AIProviderRegistryTests {
 
     @Test
     func `static accessor returns claude provider`() {
+        AIProviderRegistry.shared.reset()
         AIProviderRegistry.shared.register([
             ClaudeProvider(probe: MockUsageProbe()),
             CodexProvider(probe: MockUsageProbe()),
@@ -206,6 +209,7 @@ struct AIProviderRegistryTests {
 
     @Test
     func `static accessor returns codex provider`() {
+        AIProviderRegistry.shared.reset()
         AIProviderRegistry.shared.register([
             ClaudeProvider(probe: MockUsageProbe()),
             CodexProvider(probe: MockUsageProbe()),
@@ -218,6 +222,7 @@ struct AIProviderRegistryTests {
 
     @Test
     func `static accessor returns gemini provider`() {
+        AIProviderRegistry.shared.reset()
         AIProviderRegistry.shared.register([
             ClaudeProvider(probe: MockUsageProbe()),
             CodexProvider(probe: MockUsageProbe()),
@@ -230,6 +235,7 @@ struct AIProviderRegistryTests {
 
     @Test
     func `static accessors return nil when providers not registered`() {
+        AIProviderRegistry.shared.reset()
         AIProviderRegistry.shared.register([])
 
         #expect(AIProviderRegistry.claude == nil)
@@ -239,6 +245,7 @@ struct AIProviderRegistryTests {
 
     @Test
     func `static lookup by id returns correct provider`() {
+        AIProviderRegistry.shared.reset()
         AIProviderRegistry.shared.register([
             ClaudeProvider(probe: MockUsageProbe()),
             CodexProvider(probe: MockUsageProbe()),
