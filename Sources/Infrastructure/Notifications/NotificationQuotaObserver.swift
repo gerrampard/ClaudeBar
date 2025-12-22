@@ -69,12 +69,7 @@ public final class NotificationQuotaObserver: StatusChangeObserver, @unchecked S
     }
 
     private func providerDisplayName(for providerId: String) -> String {
-        switch providerId {
-        case "claude": return "Claude"
-        case "codex": return "Codex"
-        case "gemini": return "Gemini"
-        default: return providerId.capitalized
-        }
+        AIProviderRegistry.shared.provider(for: providerId)?.name ?? providerId.capitalized
     }
 
     private func notificationBody(for status: QuotaStatus, providerName: String) -> String {

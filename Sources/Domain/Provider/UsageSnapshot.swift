@@ -98,6 +98,13 @@ public struct UsageSnapshot: Sendable, Equatable {
         }
     }
 
+    // MARK: - Provider Access
+
+    /// The provider that owns this snapshot (looked up from registry)
+    public var provider: (any AIProvider)? {
+        AIProviderRegistry.shared.provider(for: providerId)
+    }
+
     // MARK: - Empty Snapshot
 
     /// Creates an empty snapshot for when no data is available

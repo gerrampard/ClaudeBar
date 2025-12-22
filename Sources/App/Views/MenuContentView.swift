@@ -140,24 +140,34 @@ struct MenuContentView: View {
         .offset(y: animateIn ? 0 : -10)
     }
 
+    /// Status of the currently selected provider
+    private var selectedProviderStatus: QuotaStatus {
+        selectedProvider?.snapshot?.overallStatus ?? .healthy
+    }
+
+    /// Whether the selected provider is currently syncing
+    private var isSelectedProviderSyncing: Bool {
+        selectedProvider?.isSyncing ?? false
+    }
+
     private var statusBadge: some View {
         HStack(spacing: 6) {
             // Animated pulse dot
             ZStack {
                 Circle()
-                    .fill(appState.overallStatus.themeColor(for: colorScheme))
+                    .fill(selectedProviderStatus.themeColor(for: colorScheme))
                     .frame(width: 8, height: 8)
 
                 Circle()
-                    .stroke(appState.overallStatus.themeColor(for: colorScheme), lineWidth: 2)
+                    .stroke(selectedProviderStatus.themeColor(for: colorScheme), lineWidth: 2)
                     .frame(width: 16, height: 16)
-                    .scaleEffect(appState.isRefreshing ? 1.5 : 1.0)
-                    .opacity(appState.isRefreshing ? 0 : 0.5)
+                    .scaleEffect(isSelectedProviderSyncing ? 1.5 : 1.0)
+                    .opacity(isSelectedProviderSyncing ? 0 : 0.5)
                     .animation(
-                        appState.isRefreshing
+                        isSelectedProviderSyncing
                             ? .easeOut(duration: 1.0).repeatForever(autoreverses: false)
                             : .default,
-                        value: appState.isRefreshing
+                        value: isSelectedProviderSyncing
                     )
             }
 
@@ -169,17 +179,17 @@ struct MenuContentView: View {
         .padding(.vertical, 6)
         .background(
             Capsule()
-                .fill(appState.overallStatus.themeColor(for: colorScheme).opacity(colorScheme == .dark ? 0.25 : 0.15))
+                .fill(selectedProviderStatus.themeColor(for: colorScheme).opacity(colorScheme == .dark ? 0.25 : 0.15))
                 .overlay(
                     Capsule()
-                        .stroke(appState.overallStatus.themeColor(for: colorScheme).opacity(colorScheme == .dark ? 0.5 : 0.3), lineWidth: 1)
+                        .stroke(selectedProviderStatus.themeColor(for: colorScheme).opacity(colorScheme == .dark ? 0.5 : 0.3), lineWidth: 1)
                 )
         )
     }
 
     private var statusText: String {
-        if appState.isRefreshing { return "Syncing..." }
-        return appState.overallStatus.badgeText
+        if isSelectedProviderSyncing { return "Syncing..." }
+        return selectedProviderStatus.badgeText
     }
 
     // MARK: - Provider Pills
@@ -453,12 +463,8 @@ struct ProviderPill: View {
     }
 
     private var providerIcon: String {
-        switch providerId {
-        case "claude": return "brain.fill"
-        case "codex": return "chevron.left.forwardslash.chevron.right"
-        case "gemini": return "sparkles"
-        default: return "questionmark.circle.fill"
-        }
+        AIProviderRegistry.shared.provider(for: providerId)?.symbolIconOrDefault
+            ?? "questionmark.circle.fill"
     }
 }
 

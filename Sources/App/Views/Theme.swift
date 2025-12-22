@@ -1,4 +1,5 @@
 import SwiftUI
+import Domain
 
 // MARK: - Theme Mode
 
@@ -565,75 +566,29 @@ extension View {
 }
 
 // MARK: - Provider Colors (by ID)
+// These delegate to the provider's visual identity, eliminating hardcoded switches.
 
 extension AppTheme {
-    /// Get provider theme color by ID
+    /// Get provider theme color by ID (delegates to provider's visual identity)
     static func providerColor(for providerId: String, scheme: ColorScheme) -> Color {
-        switch providerId {
-        case "claude":
-            coralAccent(for: scheme)
-        case "codex":
-            tealBright(for: scheme)
-        case "gemini":
-            goldenGlow(for: scheme)
-        default:
-            purpleVibrant(for: scheme)
-        }
+        AIProviderRegistry.shared.provider(for: providerId)?
+            .themeColorOrDefault(for: scheme) ?? purpleVibrant(for: scheme)
     }
 
-    /// Get provider gradient by ID
+    /// Get provider gradient by ID (delegates to provider's visual identity)
     static func providerGradient(for providerId: String, scheme: ColorScheme) -> LinearGradient {
-        switch providerId {
-        case "claude":
-            LinearGradient(
-                colors: [
-                    coralAccent(for: scheme),
-                    pinkHot(for: scheme)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        case "codex":
-            LinearGradient(
-                colors: [
-                    tealBright(for: scheme),
-                    scheme == .dark
-                        ? Color(red: 0.25, green: 0.65, blue: 0.85)
-                        : Color(red: 0.12, green: 0.52, blue: 0.72)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        case "gemini":
-            LinearGradient(
-                colors: [
-                    goldenGlow(for: scheme),
-                    scheme == .dark
-                        ? Color(red: 0.95, green: 0.55, blue: 0.35)
-                        : Color(red: 0.85, green: 0.45, blue: 0.25)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        default:
-            accentGradient(for: scheme)
-        }
+        AIProviderRegistry.shared.provider(for: providerId)?
+            .themeGradientOrDefault(for: scheme) ?? accentGradient(for: scheme)
     }
 
-    /// Get provider icon asset name by ID
+    /// Get provider icon asset name by ID (delegates to provider's visual identity)
     static func providerIconAssetName(for providerId: String) -> String {
-        switch providerId {
-        case "claude": "ClaudeIcon"
-        case "codex": "CodexIcon"
-        case "gemini": "GeminiIcon"
-        default: "QuestionIcon"
-        }
+        AIProviderRegistry.shared.provider(for: providerId)?
+            .iconAssetNameOrDefault ?? "QuestionIcon"
     }
 }
 
 // MARK: - Status Theme Colors (Adaptive)
-
-import Domain
 
 extension QuotaStatus {
     func themeColor(for scheme: ColorScheme) -> Color {

@@ -58,11 +58,6 @@ struct ProviderSectionView: View {
     }
 
     private var providerDisplayName: String {
-        switch snapshot.providerId {
-        case "claude": "Claude"
-        case "codex": "Codex"
-        case "gemini": "Gemini"
-        default: snapshot.providerId.capitalized
-        }
+        snapshot.provider?.name ?? snapshot.providerId.capitalized
     }
 }
