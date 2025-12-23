@@ -266,6 +266,79 @@ struct ClaudeUsageProbeParsingTests {
     Resets 4:59pm (America/New_York)
     """
 
+    // Real CLI output format with Settings header
+    static let realCliOutput = """
+    Opus 4.5 · Claude Pro · Some User
+    ~/Projects/ClaudeBar
+
+    Settings: Status  Config  Usage (tab to cycle)
+
+    Current session
+    ▌                                                  1% used
+    Resets 2:59pm (Asia/Shanghai)
+
+    Current week (all models)
+    █████                                              16% used
+    Resets Dec 25 at 4:59am (Asia/Shanghai)
+
+    Extra usage
+    Extra usage not enabled • /extra-usage to enable
+
+    Esc to cancel
+    """
+
+    // Real CLI output with ANSI escape codes (from actual terminal)
+    static let realCliOutputWithAnsi = """
+    \u{1B}[?25l\u{1B}[?2004h\u{1B}[?25h\u{1B}[?2004l\u{1B}[?2026h
+    Opus 4.5 · Claude Pro · Some User
+    ~/Projects/ClaudeBar
+
+    \u{1B}[33mSettings:\u{1B}[0m Status  Config  \u{1B}[7mUsage\u{1B}[0m (tab to cycle)
+
+    \u{1B}[1mCurrent session\u{1B}[0m
+    \u{1B}[34m▌\u{1B}[0m                                                  1% used
+    Resets 2:59pm (Asia/Shanghai)
+
+    \u{1B}[1mCurrent week (all models)\u{1B}[0m
+    \u{1B}[34m█████\u{1B}[0m                                              16% used
+    Resets Dec 25 at 4:59am (Asia/Shanghai)
+
+    \u{1B}[1mExtra usage\u{1B}[0m
+    Extra usage not enabled • /extra-usage to enable
+
+    Esc to cancel
+    \u{1B}[?2026l
+    """
+
+    @Test
+    func `parses real CLI output with Settings header`() throws {
+        // When
+        let snapshot = try ClaudeUsageProbe.parse(Self.realCliOutput)
+
+        // Then
+        #expect(snapshot.accountType == .pro)
+        #expect(snapshot.accountOrganization == "Some User")
+        #expect(snapshot.sessionQuota != nil)
+        #expect(snapshot.sessionQuota?.percentRemaining == 99) // 1% used = 99% left
+        #expect(snapshot.weeklyQuota != nil)
+        #expect(snapshot.weeklyQuota?.percentRemaining == 84) // 16% used = 84% left
+        #expect(snapshot.costUsage == nil) // Extra usage not enabled
+    }
+
+    @Test
+    func `parses real CLI output with ANSI escape codes`() throws {
+        // When
+        let snapshot = try ClaudeUsageProbe.parse(Self.realCliOutputWithAnsi)
+
+        // Then
+        #expect(snapshot.accountType == .pro)
+        #expect(snapshot.accountOrganization == "Some User")
+        #expect(snapshot.sessionQuota != nil)
+        #expect(snapshot.sessionQuota?.percentRemaining == 99) // 1% used = 99% left
+        #expect(snapshot.weeklyQuota != nil)
+        #expect(snapshot.weeklyQuota?.percentRemaining == 84) // 16% used = 84% left
+    }
+
     @Test
     func `detects Max account type from header`() throws {
         // Given
