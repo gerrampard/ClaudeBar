@@ -1,5 +1,8 @@
 import SwiftUI
 import Domain
+#if ENABLE_SPARKLE
+import Sparkle
+#endif
 
 /// The main menu content view with adaptive light/dark/christmas theme support.
 /// Features purple-pink gradients, glassmorphism cards, and bold typography.
@@ -10,6 +13,9 @@ struct MenuContentView: View {
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.isChristmasTheme) private var isChristmas
+    #if ENABLE_SPARKLE
+    @Environment(\.sparkleUpdater) private var sparkleUpdater
+    #endif
     @State private var selectedProviderId: String = "claude"
     @State private var isHoveringRefresh = false
     @State private var animateIn = false
@@ -82,6 +88,11 @@ struct MenuContentView: View {
             }
             // Then fetch data in background
             await refresh(providerId: selectedProviderId)
+
+            // Check for updates when menu opens (no UI unless update found)
+            #if ENABLE_SPARKLE
+            sparkleUpdater?.checkForUpdatesInBackground()
+            #endif
         }
         .onChange(of: selectedProviderId) { _, newProviderId in
             // Refresh when user switches provider
