@@ -38,16 +38,9 @@ ClaudeBar uses [Sparkle](https://sparkle-project.org/) for automatic updates. Wh
 
 ### Running with Sparkle Enabled
 
-Sparkle requires a proper `.app` bundle. Use the Makefile:
+Sparkle requires a proper `.app` bundle. In development, Sparkle is disabled when running via `swift run` since there's no bundle structure.
 
-```bash
-# Build and run with Sparkle enabled
-make run
-
-# Or manually:
-swift build
-# ... creates ClaudeBar.app bundle and opens it
-```
+For release builds, the GitHub Actions workflow creates the proper `.app` bundle with Sparkle fully functional.
 
 ### Running from Xcode/swift run
 
@@ -160,7 +153,6 @@ The private key used to sign the release must match the public key in Info.plist
 | `docs/appcast.xml` | Update feed (deployed to GitHub Pages) |
 | `.github/workflows/release.yml` | Automated release with appcast generation |
 | `scripts/sparkle-setup.sh` | EdDSA key generation helper |
-| `Makefile` | `make run` for testing with Sparkle |
 
 ## References
 
