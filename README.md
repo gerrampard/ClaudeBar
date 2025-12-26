@@ -185,6 +185,16 @@ Releases are automated via GitHub Actions. Push a version tag to create a new re
 
 **For detailed setup instructions, see [docs/RELEASE_SETUP.md](docs/RELEASE_SETUP.md).**
 
+### Release Workflow
+
+The workflow uses Tuist to generate the Xcode project:
+
+```
+Tag v1.0.0 → Update Info.plist → tuist generate → xcodebuild → Sign & Notarize → GitHub Release
+```
+
+Version is set in `Sources/App/Info.plist` and flows through to Sparkle auto-updates.
+
 ### Quick Start
 
 1. **Configure GitHub Secrets** (see [full guide](docs/RELEASE_SETUP.md)):

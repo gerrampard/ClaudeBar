@@ -95,8 +95,10 @@ jobs:
           echo "Updated version to $VERSION (build $BUILD_NUMBER)"
           echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
 
-      - name: Generate Xcode Project
-        run: tuist generate --no-open
+      - name: Install Dependencies & Generate Xcode Project
+        run: |
+          tuist install
+          tuist generate --no-open
 
       - name: Build Universal App Bundle
         run: |

@@ -105,6 +105,67 @@ The codebase separates testable logic from external system interaction:
 3. Register provider in `ClaudeBarApp.init()`
 4. Add parsing tests in `Tests/InfrastructureTests/CLI/`
 
+## Assets
+
+The project uses a standard Xcode asset catalog for images:
+
+```
+Sources/App/Resources/
+├── Assets.xcassets/           # Used at runtime
+│   ├── AppIcon.appiconset/    # App icon (all sizes)
+│   ├── AppLogo.imageset/      # App logo
+│   ├── ClaudeIcon.imageset/   # Provider icons (PNG @1x, @2x, @3x)
+│   ├── CodexIcon.imageset/
+│   ├── CopilotIcon.imageset/
+│   └── GeminiIcon.imageset/
+├── ClaudeIcon.svg             # Source SVG files (kept for reference)
+├── CodexIcon.svg
+├── CopilotIcon.png
+└── GeminiIcon.svg
+```
+
+- **Runtime**: PNGs from `Assets.xcassets` loaded via `NSImage(named:)`
+- **Source**: SVGs kept as original files for future regeneration
+
+## Versioning & Release
+
+### How Version Updates Work (with Tuist)
+
+The release workflow updates version before Tuist generates the project:
+
+```
+1. GitHub Action triggered (tag v1.0.0 or manual input)
+2. Update Info.plist ← PlistBuddy sets CFBundleShortVersionString
+3. tuist generate   ← Reads updated Info.plist
+4. xcodebuild       ← Builds app with correct version
+5. Sparkle appcast  ← Generated with version for auto-updates
+```
+
+**Key files:**
+- `Sources/App/Info.plist` - Source of truth for version (`CFBundleShortVersionString`, `CFBundleVersion`)
+- `Project.swift` - References Info.plist: `infoPlist: .file(path: "Sources/App/Info.plist")`
+
+### Manual Version Update (Local Development)
+
+```bash
+# Update version in Info.plist
+/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.0" Sources/App/Info.plist
+/usr/libexec/PlistBuddy -c "Set :CFBundleVersion 1" Sources/App/Info.plist
+
+# Regenerate Xcode project
+tuist generate
+```
+
+### Creating a Release
+
+```bash
+# Tag and push to trigger release workflow
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+Or use the manual workflow dispatch in GitHub Actions with version input.
+
 ## Dependencies
 
 - **Sparkle**: Auto-update framework for macOS
