@@ -235,6 +235,16 @@ struct MenuContentView: View {
         return selectedProviderStatus.badgeText
     }
 
+    /// Help text for settings button, includes update info if available
+    private var updateAvailableHelpText: String {
+        #if ENABLE_SPARKLE
+        if let version = sparkleUpdater?.availableVersion, sparkleUpdater?.isUpdateAvailable == true {
+            return "Update available: v\(version)"
+        }
+        #endif
+        return "Settings"
+    }
+
     // MARK: - Provider Pills
 
     private var providerPills: some View {
@@ -423,7 +433,7 @@ struct MenuContentView: View {
 
             Spacer()
 
-            // Settings Button
+            // Settings Button with update indicator
             Button {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     showSettings = true
@@ -437,10 +447,20 @@ struct MenuContentView: View {
                     Image(systemName: "gearshape.fill")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(isChristmas ? AppTheme.christmasTextSecondary : AppTheme.textSecondary(for: colorScheme))
+
+                    // Update available indicator
+                    #if ENABLE_SPARKLE
+                    if sparkleUpdater?.isUpdateAvailable == true {
+                        Circle()
+                            .fill(AppTheme.statusCritical(for: colorScheme))
+                            .frame(width: 8, height: 8)
+                            .offset(x: 10, y: -10)
+                    }
+                    #endif
                 }
             }
             .buttonStyle(.plain)
-            .help("Settings")
+            .help(updateAvailableHelpText)
             .keyboardShortcut(",")
 
             // Quit Button

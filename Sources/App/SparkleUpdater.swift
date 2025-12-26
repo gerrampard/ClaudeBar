@@ -2,6 +2,32 @@
 import Sparkle
 import SwiftUI
 
+/// Delegate to receive update notifications from Sparkle
+private class SparkleUpdaterDelegate: NSObject, SPUUpdaterDelegate, @unchecked Sendable {
+    weak var wrapper: SparkleUpdater?
+
+    func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
+        let version = item.displayVersionString
+        let wrapper = self.wrapper
+        Task { @MainActor in
+            wrapper?.setUpdateAvailable(version: version)
+        }
+    }
+
+    func updaterDidNotFindUpdate(_ updater: SPUUpdater, error: any Error) {
+        let wrapper = self.wrapper
+        Task { @MainActor in
+            wrapper?.clearUpdateAvailable()
+        }
+    }
+}
+
+/// User driver delegate to handle gentle reminders for background apps
+private class SparkleUserDriverDelegate: NSObject, SPUStandardUserDriverDelegate {
+    /// We implement our own gentle reminder via the update badge indicator
+    var supportsGentleScheduledUpdateReminders: Bool { true }
+}
+
 /// A wrapper around SPUUpdater for SwiftUI integration.
 /// This class manages the Sparkle update lifecycle and provides
 /// observable properties for UI binding.
@@ -11,8 +37,20 @@ final class SparkleUpdater {
     /// The underlying Sparkle updater controller (nil if bundle is invalid)
     private var controller: SPUStandardUpdaterController?
 
+    /// Delegate to receive update notifications
+    private var updaterDelegate: SparkleUpdaterDelegate?
+
+    /// User driver delegate to handle gentle reminders
+    private var userDriverDelegate: SparkleUserDriverDelegate?
+
     /// Whether an update check is currently in progress
     private(set) var isCheckingForUpdates = false
+
+    /// Whether a new update is available
+    private(set) var isUpdateAvailable = false
+
+    /// The version string of the available update
+    private(set) var availableVersion: String?
 
     /// Whether the updater is available (bundle is properly configured)
     var isAvailable: Bool {
@@ -38,12 +76,23 @@ final class SparkleUpdater {
     init() {
         // Check if we're in a proper app bundle
         if Self.isProperAppBundle() {
-            // Normal app bundle - initialize Sparkle
+            // Create delegate to receive update notifications
+            let delegate = SparkleUpdaterDelegate()
+            self.updaterDelegate = delegate
+
+            // Create user driver delegate for gentle reminders support
+            let userDriver = SparkleUserDriverDelegate()
+            self.userDriverDelegate = userDriver
+
+            // Normal app bundle - initialize Sparkle with delegates
             controller = SPUStandardUpdaterController(
                 startingUpdater: true,
-                updaterDelegate: nil,
-                userDriverDelegate: nil
+                updaterDelegate: delegate,
+                userDriverDelegate: userDriver
             )
+
+            // Set back reference for delegate callbacks
+            delegate.wrapper = self
         } else {
             // Debug/development build - Sparkle won't work without proper bundle
             print("SparkleUpdater: Not running from app bundle, updater disabled")
@@ -61,6 +110,18 @@ final class SparkleUpdater {
     /// Check for updates in the background (no UI unless update found)
     func checkForUpdatesInBackground() {
         controller?.updater.checkForUpdatesInBackground()
+    }
+
+    /// Called by delegate when an update is found
+    fileprivate func setUpdateAvailable(version: String) {
+        isUpdateAvailable = true
+        availableVersion = version
+    }
+
+    /// Called by delegate when no update is found
+    fileprivate func clearUpdateAvailable() {
+        isUpdateAvailable = false
+        availableVersion = nil
     }
 
     /// Check if running from a proper .app bundle
