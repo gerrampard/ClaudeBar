@@ -1,7 +1,7 @@
 ---
 name: implement-feature
 description: |
-  Guide for implementing features in ClaudeBar following TDD, rich domain models, and Swift 6.2 patterns. Use this skill when:
+  Guide for implementing features in ClaudeBar following architecture-first design, TDD, rich domain models, and Swift 6.2 patterns. Use this skill when:
   (1) Adding new functionality to the app
   (2) Creating domain models that follow user's mental model
   (3) Building SwiftUI views that consume domain models directly
@@ -11,7 +11,108 @@ description: |
 
 # Implement Feature in ClaudeBar
 
-Implement features using TDD, rich domain models, and Swift 6.2 patterns.
+Implement features using architecture-first design, TDD, rich domain models, and Swift 6.2 patterns.
+
+## Workflow Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. ARCHITECTURE DESIGN (Required - User Approval Needed)  │
+├─────────────────────────────────────────────────────────────┤
+│  • Analyze requirements                                     │
+│  • Create component diagram                                 │
+│  • Show data flow and interactions                          │
+│  • Present to user for review                               │
+│  • Wait for approval before proceeding                      │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼ (User Approves)
+┌─────────────────────────────────────────────────────────────┐
+│  2. TDD IMPLEMENTATION                                      │
+├─────────────────────────────────────────────────────────────┤
+│  • Domain model tests → Domain models                       │
+│  • Infrastructure tests → Implementations                   │
+│  • Integration and views                                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Phase 0: Architecture Design (MANDATORY)
+
+Before writing any code, create an architecture diagram and get user approval.
+
+### Step 1: Analyze Requirements
+
+Identify:
+- What new models/types are needed
+- Which existing components will be modified
+- Data flow between components
+- External dependencies (CLI, API, etc.)
+
+### Step 2: Create Architecture Diagram
+
+Use ASCII diagram showing all components and their interactions:
+
+```
+Example: Adding a new AI provider
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                           ARCHITECTURE                               │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌─────────────┐     ┌──────────────────┐     ┌──────────────────┐  │
+│  │  External   │     │  Infrastructure  │     │     Domain       │  │
+│  └─────────────┘     └──────────────────┘     └──────────────────┘  │
+│                                                                      │
+│  ┌─────────────┐     ┌──────────────────┐     ┌──────────────────┐  │
+│  │  CLI Tool   │────▶│  NewUsageProbe   │────▶│  UsageSnapshot   │  │
+│  │  (new-cli)  │     │  (implements     │     │  (existing)      │  │
+│  └─────────────┘     │   UsageProbe)    │     └──────────────────┘  │
+│                      └──────────────────┘              │             │
+│                              │                         ▼             │
+│                              │              ┌──────────────────┐     │
+│                              │              │  NewProvider     │     │
+│                              └─────────────▶│  (AIProvider)    │     │
+│                                             └──────────────────┘     │
+│                                                       │              │
+│                                                       ▼              │
+│                              ┌──────────────────────────────────┐   │
+│                              │  App Layer                        │   │
+│                              │  ┌────────────────────────────┐   │   │
+│                              │  │ ClaudeBarApp.swift         │   │   │
+│                              │  │ (register new provider)    │   │   │
+│                              │  └────────────────────────────┘   │   │
+│                              └──────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Step 3: Document Component Interactions
+
+List each component with:
+- **Purpose**: What it does
+- **Inputs**: What it receives
+- **Outputs**: What it produces
+- **Dependencies**: What it needs
+
+```
+Example:
+
+| Component      | Purpose                | Inputs          | Outputs        | Dependencies    |
+|----------------|------------------------|-----------------|----------------|-----------------|
+| NewUsageProbe  | Fetch usage from CLI   | CLI command     | UsageSnapshot  | CLIExecutor     |
+| NewProvider    | Manages probe lifecycle| UsageProbe      | snapshot state | UsageProbe      |
+```
+
+### Step 4: Present for User Approval
+
+**IMPORTANT**: Always ask user to review the architecture before implementing.
+
+Use AskUserQuestion tool with options:
+- "Approve - proceed with implementation"
+- "Modify - I have feedback on the design"
+
+Do NOT proceed to Phase 1 until user explicitly approves.
+
+---
 
 ## Core Principles
 
@@ -122,12 +223,20 @@ Wire up in `ClaudeBarApp.swift` and create views.
 
 ## References
 
+- [Architecture diagram patterns](references/architecture-diagrams.md) - ASCII diagram examples for different scenarios
 - [Swift 6.2 @Observable patterns](references/swift-observable.md)
 - [Rich domain model patterns](references/domain-models.md)
 - [TDD test patterns](references/tdd-patterns.md)
 
 ## Checklist
 
+### Architecture Design (Phase 0)
+- [ ] Analyze requirements and identify components
+- [ ] Create ASCII architecture diagram with component interactions
+- [ ] Document component table (purpose, inputs, outputs, dependencies)
+- [ ] **Get user approval before proceeding**
+
+### Implementation (Phases 1-3)
 - [ ] Define domain models in `Sources/Domain/` with behavior
 - [ ] Write domain model tests (test behavior, not data)
 - [ ] Define protocols with `@Mockable`
