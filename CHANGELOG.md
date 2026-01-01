@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **Z.ai Demo Mode**: Removed demo mode toggle - Z.ai provider now always uses real credentials
+
+### Technical
+- Removed `ZaiDemoUsageProbe` adapter
+- Removed `zaiDemoMode` setting from AppSettings
+- Removed demo mode toggle from settings UI
+
 ## [0.2.11] - 2026-01-01
 
 ### Added
