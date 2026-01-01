@@ -142,19 +142,19 @@ Views consume domain models directly from `QuotaMonitor`:
 ```swift
 // QuotaMonitor is the single source of truth
 public actor QuotaMonitor {
-    public nonisolated let providers: AIProviders  // Repository
+    private let providers: AIProviders  // Hidden - use delegation methods
+
+    // Delegation methods (nonisolated for UI access)
+    public nonisolated var allProviders: [any AIProvider]
+    public nonisolated var enabledProviders: [any AIProvider]
+    public nonisolated func provider(for id: String) -> (any AIProvider)?
+    public nonisolated func addProvider(_ provider: any AIProvider)
+    public nonisolated func removeProvider(id: String)
+
+    // Selection state
     public nonisolated var selectedProviderId: String
     public nonisolated var selectedProvider: (any AIProvider)?
     public nonisolated var selectedProviderStatus: QuotaStatus
-}
-
-// AIProviders is the repository (rich domain model)
-@Observable
-public final class AIProviders {
-    public private(set) var all: [any AIProvider]
-    public var enabled: [any AIProvider] { all.filter { $0.isEnabled } }
-    public func add(_ provider: any AIProvider)
-    public func remove(id: String)
 }
 
 // Views consume domain directly - NO AppState layer
@@ -162,7 +162,8 @@ struct MenuContentView: View {
     let monitor: QuotaMonitor  // Injected from app
 
     var body: some View {
-        ForEach(monitor.providers.enabled, id: \.id) { provider in
+        // Use delegation methods, not monitor.providers.enabled
+        ForEach(monitor.enabledProviders, id: \.id) { provider in
             ProviderPill(provider: provider)
         }
     }

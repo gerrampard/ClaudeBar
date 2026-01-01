@@ -51,13 +51,46 @@ tuist generate
 
 ## Architecture
 
-The project follows a layered architecture with protocol-based dependency injection:
+The project follows a layered architecture with `QuotaMonitor` as the single source of truth:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         DOMAIN LAYER                                 │
+│                                                                      │
+│  QuotaMonitor (actor) - Single Source of Truth                      │
+│  ├── providers: AIProviders (private repository)                    │
+│  ├── Delegation: allProviders, enabledProviders, provider(for:)     │
+│  ├── Selection: selectedProviderId, selectedProvider                │
+│  └── Operations: refreshAll(), addProvider(), removeProvider()      │
+│                                                                      │
+│  AIProviders (@Observable) - Repository                              │
+│  ├── all: [AIProvider]                                              │
+│  ├── enabled: [AIProvider] (filters by isEnabled)                   │
+│  └── add(), remove(), provider(id:)                                 │
+│                                                                      │
+│  AIProvider (@Observable) - Rich Domain Model                        │
+│  ├── isEnabled: Bool (persisted to UserDefaults)                    │
+│  ├── snapshot: UsageSnapshot?                                       │
+│  └── refresh() async                                                │
+└─────────────────────────────────────────────────────────────────────┘
+                              │
+                              │ Views consume directly (no AppState)
+                              ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                           APP LAYER                                  │
+│  ClaudeBarApp: @State var monitor: QuotaMonitor                     │
+│  Views: MenuContentView(monitor), SettingsView(monitor)             │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
 ### Layers
 
 - **Domain** (`Sources/Domain/`): Pure business logic with no external dependencies
-  - Provider (`Provider/`): `AIProvider` protocol, `UsageProbe` protocol, and rich models (`UsageQuota`, `UsageSnapshot`, `QuotaStatus`)
-  - Monitor (`Monitor/`): `QuotaMonitor` actor and `QuotaStatusListener` protocol
+  - Provider (`Provider/`):
+    - `AIProvider` protocol - rich domain model with `isEnabled` state
+    - `AIProviders` - repository for provider collection management
+    - `UsageProbe` protocol, rich models (`UsageQuota`, `UsageSnapshot`, `QuotaStatus`)
+  - Monitor (`Monitor/`): `QuotaMonitor` actor (single source of truth) and `QuotaStatusListener` protocol
 
 - **Infrastructure** (`Sources/Infrastructure/`): Technical implementations
   - CLI (`CLI/`): Probes and protocols for CLI interaction
@@ -80,8 +113,7 @@ The project follows a layered architecture with protocol-based dependency inject
   - Notifications (`Notifications/`): `QuotaAlerter` - alerts users when quota degrades
 
 - **App** (`Sources/App/`): SwiftUI menu bar application
-  - Views directly consume domain models (no ViewModel layer)
-  - `AppState` is an `@Observable` class shared across views
+  - Views directly consume `QuotaMonitor` (no ViewModel, no AppState layer)
   - `StatusBarIcon` - menu bar icon with status indicator
 
 ### Key Patterns
@@ -114,7 +146,7 @@ The skill will guide you through:
 2. **Probe Behavior Tests** → Test detection and error handling with mocks
 3. **Probe Implementation** → Implement `UsageProbe` in `Sources/Infrastructure/CLI/`
 4. **Provider Class** → Create `AIProvider` in `Sources/Domain/Provider/`
-5. **Registration** → Add to `ClaudeBarApp.init()` and `AIProviderRegistry`
+5. **Registration** → Add to `ClaudeBarApp.init()` providers array
 
 **Skill location:** `.claude/skills/add-provider/SKILL.md`
 

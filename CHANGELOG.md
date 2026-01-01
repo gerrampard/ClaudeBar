@@ -7,10 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Provider Enable/Disable**: Toggle individual AI providers on/off from Settings. Disabled providers are hidden from the menu bar and excluded from quota monitoring.
+
+### Changed
+- **Architecture Refactor**: Simplified architecture with `QuotaMonitor` as single source of truth
+  - Removed `AppState` layer - views now consume domain models directly
+  - Added `AIProviders` repository for provider management
+  - `AIProvider.isEnabled` state persisted to UserDefaults
+
 ### Removed
 - **Z.ai Demo Mode**: Removed demo mode toggle - Z.ai provider now always uses real credentials
 
 ### Technical
+- `QuotaMonitor` now owns `AIProviders` repository with delegation methods (`allProviders`, `enabledProviders`, `addProvider`, `removeProvider`)
+- Views consume `QuotaMonitor` directly via injection (no intermediate AppState)
+- Each `AIProvider` owns its `isEnabled` state with UserDefaults persistence
 - Removed `ZaiDemoUsageProbe` adapter
 - Removed `zaiDemoMode` setting from AppSettings
 - Removed demo mode toggle from settings UI

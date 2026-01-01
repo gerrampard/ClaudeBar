@@ -143,25 +143,30 @@ After opening in Xcode, SwiftUI previews will work with `Cmd+Option+Return`.
 
 ## Architecture
 
-ClaudeBar uses a layered architecture with protocol-based dependency injection:
+ClaudeBar uses a layered architecture with `QuotaMonitor` as the single source of truth:
 
 ```
-┌─────────────────────────────────────────────────┐
-│                   App Layer                     │
-│     SwiftUI Views + @Observable AppState        │
-└─────────────────────────────────────────────────┘
-                        │
-                        ▼
-┌─────────────────────────────────────────────────┐
-│                 Domain Layer                    │
-│  Models: UsageQuota, UsageSnapshot, QuotaStatus │
-│  Protocols: UsageProbe, StatusChangeObserver    │
-│  Services: QuotaMonitor (Actor)                 │
-└─────────────────────────────────────────────────┘
-                        │
-                        ▼
 ┌─────────────────────────────────────────────────────────┐
-│                 Infrastructure Layer                    │
+│                       App Layer                          │
+│  ClaudeBarApp: @State var monitor: QuotaMonitor         │
+│  Views consume QuotaMonitor directly (no AppState)       │
+└─────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│                     Domain Layer                         │
+│  QuotaMonitor (actor) - Single Source of Truth          │
+│  ├── AIProviders repository (private)                   │
+│  ├── allProviders, enabledProviders, provider(for:)     │
+│  └── addProvider(), removeProvider()                    │
+│                                                          │
+│  AIProvider - Rich domain model with isEnabled state    │
+│  Models: UsageQuota, UsageSnapshot, QuotaStatus         │
+└─────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│                 Infrastructure Layer                     │
 │  Probes: Claude, Codex, Gemini, Copilot, Antigravity, Z.ai │
 │  Adapters: Pure 3rd-party wrappers (no coverage)        │
 └─────────────────────────────────────────────────────────┘
@@ -170,10 +175,11 @@ ClaudeBar uses a layered architecture with protocol-based dependency injection:
 ### Key Design Decisions
 
 - **Rich Domain Models** - Business logic lives in domain models, not ViewModels
+- **Single Source of Truth** - `QuotaMonitor` owns all provider state and selection
 - **Actor-Based Concurrency** - Thread-safe state management with Swift actors
 - **Protocol-Based DI** - `@Mockable` protocols enable testability without real CLI/network
 - **Adapters Folder** - Pure 3rd-party wrappers excluded from code coverage
-- **No ViewModel Layer** - SwiftUI views directly consume domain models
+- **No ViewModel/AppState Layer** - SwiftUI views directly consume `QuotaMonitor`
 
 ## Contributing
 
