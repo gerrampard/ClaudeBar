@@ -11,11 +11,11 @@ protocol AlertSender: Sendable {
     func send(title: String, body: String, categoryIdentifier: String) async throws
 }
 
-// MARK: - QuotaAlerter
+// MARK: - NotificationAlerter
 
 /// Alerts users when their AI quota status degrades.
 /// Sends system notifications for warning, critical, and depleted states.
-public final class QuotaAlerter: QuotaStatusListener, @unchecked Sendable {
+public final class NotificationAlerter: QuotaAlerter, @unchecked Sendable {
 
     private let alertSender: AlertSender
 
@@ -39,27 +39,27 @@ public final class QuotaAlerter: QuotaStatusListener, @unchecked Sendable {
         return granted
     }
 
-    // MARK: - QuotaStatusListener
+    // MARK: - QuotaAlerter
 
-    public func onStatusChanged(providerId: String, oldStatus: QuotaStatus, newStatus: QuotaStatus) async {
-        AppLog.notifications.debug("Status change: \(providerId) \(oldStatus) -> \(newStatus)")
+    public func alert(providerId: String, previousStatus: QuotaStatus, currentStatus: QuotaStatus) async {
+        AppLog.notifications.debug("Status change: \(providerId) \(previousStatus) -> \(currentStatus)")
 
         // Only alert on degradation (getting worse)
-        guard newStatus > oldStatus else {
+        guard currentStatus > previousStatus else {
             AppLog.notifications.debug("Status improved or same, skipping alert")
             return
         }
 
-        guard shouldAlert(for: newStatus) else {
-            AppLog.notifications.debug("Status \(newStatus) does not require alert")
+        guard shouldAlert(for: currentStatus) else {
+            AppLog.notifications.debug("Status \(currentStatus) does not require alert")
             return
         }
 
         let providerName = providerDisplayName(for: providerId)
         let title = "\(providerName) Quota Alert"
-        let body = alertBody(for: newStatus, providerName: providerName)
+        let body = alertBody(for: currentStatus, providerName: providerName)
 
-        AppLog.notifications.notice("Sending quota alert for \(providerId): \(newStatus)")
+        AppLog.notifications.notice("Sending quota alert for \(providerId): \(currentStatus)")
 
         do {
             try await alertSender.send(title: title, body: body, categoryIdentifier: "QUOTA_ALERT")

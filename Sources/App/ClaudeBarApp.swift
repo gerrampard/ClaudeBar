@@ -12,7 +12,7 @@ struct ClaudeBarApp: App {
     @State private var monitor: QuotaMonitor
 
     /// Alerts users when quota status degrades
-    private let quotaAlerter = QuotaAlerter()
+    private let quotaAlerter = NotificationAlerter()
 
     #if ENABLE_SPARKLE
     /// Sparkle updater for auto-updates
@@ -42,7 +42,7 @@ struct ClaudeBarApp: App {
         // Initialize the domain service with quota alerter
         monitor = QuotaMonitor(
             providers: repository,
-            statusListener: quotaAlerter
+            alerter: quotaAlerter
         )
         AppLog.monitor.info("QuotaMonitor initialized")
 

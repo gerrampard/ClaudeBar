@@ -578,13 +578,13 @@ struct QuotaMonitorTests {
         #expect(monitor.allProviders.count == 2)
     }
 
-    // MARK: - Status Listener
+    // MARK: - Quota Alerter
 
     @Test
-    func `status listener is notified on status change`() async {
+    func `alerter is called on status change`() async {
         // Given
-        let mockListener = MockQuotaStatusListener()
-        given(mockListener).onStatusChanged(providerId: .any, oldStatus: .any, newStatus: .any).willReturn(())
+        let mockAlerter = MockQuotaAlerter()
+        given(mockAlerter).alert(providerId: .any, previousStatus: .any, currentStatus: .any).willReturn(())
 
         let probe = MockUsageProbe()
         given(probe).isAvailable().willReturn(true)
@@ -595,24 +595,24 @@ struct QuotaMonitorTests {
         ))
         let settings = makeSettingsRepository()
         let claude = ClaudeProvider(probe: probe, settingsRepository: settings)
-        let monitor = QuotaMonitor(providers: AIProviders(providers: [claude]), statusListener: mockListener)
+        let monitor = QuotaMonitor(providers: AIProviders(providers: [claude]), alerter: mockAlerter)
 
         // When
         await monitor.refresh(providerId: "claude")
 
         // Then
-        verify(mockListener).onStatusChanged(
+        verify(mockAlerter).alert(
             providerId: .value("claude"),
-            oldStatus: .value(.healthy),
-            newStatus: .value(.critical)
+            previousStatus: .value(.healthy),
+            currentStatus: .value(.critical)
         ).called(1)
     }
 
     @Test
-    func `status listener not notified when status unchanged`() async {
+    func `alerter not called when status unchanged`() async {
         // Given
-        let mockListener = MockQuotaStatusListener()
-        given(mockListener).onStatusChanged(providerId: .any, oldStatus: .any, newStatus: .any).willReturn(())
+        let mockAlerter = MockQuotaAlerter()
+        given(mockAlerter).alert(providerId: .any, previousStatus: .any, currentStatus: .any).willReturn(())
 
         let probe = MockUsageProbe()
         given(probe).isAvailable().willReturn(true)
@@ -623,7 +623,7 @@ struct QuotaMonitorTests {
         ))
         let settings = makeSettingsRepository()
         let claude = ClaudeProvider(probe: probe, settingsRepository: settings)
-        let monitor = QuotaMonitor(providers: AIProviders(providers: [claude]), statusListener: mockListener)
+        let monitor = QuotaMonitor(providers: AIProviders(providers: [claude]), alerter: mockAlerter)
 
         // When - refresh twice with same status
         await monitor.refresh(providerId: "claude")
@@ -631,7 +631,7 @@ struct QuotaMonitorTests {
 
         // Then - only notified once (first change from nil/healthy to healthy)
         // Actually, the first refresh won't trigger because healthy -> healthy
-        verify(mockListener).onStatusChanged(providerId: .any, oldStatus: .any, newStatus: .any).called(0)
+        verify(mockAlerter).alert(providerId: .any, previousStatus: .any, currentStatus: .any).called(0)
     }
 
     // MARK: - Disabled Provider Skipping

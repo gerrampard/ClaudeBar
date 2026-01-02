@@ -11,14 +11,14 @@ public enum MonitoringEvent: Sendable {
 
 /// The main domain service that coordinates quota monitoring across AI providers.
 /// Providers are rich domain models that own their own snapshots.
-/// QuotaMonitor coordinates refreshes and optionally notifies a status handler.
+/// QuotaMonitor coordinates refreshes and alerts users when status changes.
 @Observable
 public final class QuotaMonitor: @unchecked Sendable {
     /// The providers repository (internal - access via delegation methods)
     private let providers: any AIProviderRepository
 
-    /// Optional listener for status changes (e.g., QuotaAlerter)
-    private let statusListener: (any QuotaStatusListener)?
+    /// Optional alerter for quota changes (e.g., system notifications)
+    private let alerter: (any QuotaAlerter)?
 
     /// Previous status for change detection
     private var previousStatuses: [String: QuotaStatus] = [:]
@@ -37,10 +37,10 @@ public final class QuotaMonitor: @unchecked Sendable {
     /// Creates a QuotaMonitor with a provider repository
     public init(
         providers: any AIProviderRepository,
-        statusListener: (any QuotaStatusListener)? = nil
+        alerter: (any QuotaAlerter)? = nil
     ) {
         self.providers = providers
-        self.statusListener = statusListener
+        self.alerter = alerter
     }
 
     // MARK: - Monitoring Operations
@@ -72,19 +72,19 @@ public final class QuotaMonitor: @unchecked Sendable {
         }
     }
 
-    /// Handles snapshot update and notifies status observer if status changed
+    /// Handles snapshot update and alerts user if status changed
     private func handleSnapshotUpdate(provider: any AIProvider, snapshot: UsageSnapshot) async {
         let previousStatus = previousStatuses[provider.id] ?? .healthy
         let newStatus = snapshot.overallStatus
 
         previousStatuses[provider.id] = newStatus
 
-        // Notify listener only if status changed
-        if previousStatus != newStatus, let listener = statusListener {
-            await listener.onStatusChanged(
+        // Alert user only if status changed
+        if previousStatus != newStatus, let alerter = alerter {
+            await alerter.alert(
                 providerId: provider.id,
-                oldStatus: previousStatus,
-                newStatus: newStatus
+                previousStatus: previousStatus,
+                currentStatus: newStatus
             )
         }
     }
