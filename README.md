@@ -18,10 +18,19 @@ A macOS menu bar application that monitors AI coding assistant usage quotas. Kee
   <em>Dark Mode &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Light Mode</em>
 </p>
 
+### CLI Theme
+
+<p align="center">
+  <img src="docs/Screenshot-cli-dark.png" alt="ClaudeBar CLI Theme" width="380"/>
+</p>
+<p align="center">
+  <em>Minimalistic monochrome terminal aesthetic with classic green accents</em>
+</p>
+
 ### Christmas Theme
 
 <p align="center">
-  <img src="docs/Christmas-theme.png" alt="ClaudeBar Christmas Theme" width="450"/>
+  <img src="docs/Christmas-theme.png" alt="ClaudeBar Christmas Theme" width="380"/>
 </p>
 <p align="center">
   <em>Festive holiday theme with snowfall animation - automatically enabled during the Christmas season!</em>
@@ -32,8 +41,8 @@ A macOS menu bar application that monitors AI coding assistant usage quotas. Kee
 - **Multi-Provider Support** - Monitor Claude, Codex, Gemini, GitHub Copilot, Antigravity, and Z.ai quotas in one place
 - **Provider Enable/Disable** - Toggle individual providers on/off from Settings to customize your monitoring
 - **Real-Time Quota Tracking** - View Session, Weekly, and Model-specific usage percentages
-- **Light & Dark Themes** - Automatically adapts to your system appearance
-- **Seasonal Themes** - Festive Christmas theme with snowfall animation, auto-enabled during the holiday season
+- **Multiple Themes** - Light, Dark, CLI (terminal-style), and festive Christmas themes
+- **Automatic Adaptation** - System theme follows your macOS appearance; Christmas auto-enables during the holiday season
 - **Visual Status Indicators** - Color-coded progress bars (green/yellow/red) show quota health
 - **System Notifications** - Get alerted when quota status changes to warning or critical
 - **Auto-Refresh** - Automatically updates quotas at configurable intervals
