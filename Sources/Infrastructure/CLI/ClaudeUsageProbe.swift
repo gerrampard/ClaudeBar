@@ -606,13 +606,6 @@ public final class ClaudeUsageProbe: UsageProbe, @unchecked Sendable {
     internal func extractUsageError(_ text: String) -> ProbeError? {
         let lower = text.lowercased()
 
-        // Check for API billing accounts that don't support /usage
-        if lower.contains("/usage is only available for subscription plans") ||
-           lower.contains("only available for subscription") {
-            AppLog.probes.info("Claude probe: /usage not available for API billing account")
-            return .subscriptionRequired
-        }
-
         if lower.contains("do you trust the files in this folder?"), !lower.contains("current session") {
             AppLog.probes.error("Claude probe blocked: folder trust required")
             return .folderTrustRequired

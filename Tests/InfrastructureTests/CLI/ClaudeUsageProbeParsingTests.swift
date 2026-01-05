@@ -545,18 +545,8 @@ struct ClaudeUsageProbeParsingTests {
         }
     }
 
-    @Test
-    func `detects only available for subscription message`() throws {
-        // Given
-        let probe = ClaudeUsageProbe()
-        let output = "/usage is only available for subscription plans."
-
-        // When
-        let error = probe.extractUsageError(output)
-
-        // Then
-        #expect(error == .subscriptionRequired)
-    }
+    // Note: The "only available for subscription" error check was removed from extractUsageError
+    // because API billing accounts are now detected earlier via detectAccountType() in parseClaudeOutput()
 
     // MARK: - /cost Command Parsing
 
