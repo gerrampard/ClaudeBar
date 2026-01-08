@@ -45,6 +45,9 @@ internal struct GeminiAPIProbe {
             } catch ProbeError.authenticationRequired {
                 AppLog.probes.error("Gemini: API probe failed with authentication error even after token refresh")
                 throw ProbeError.authenticationRequired
+            } catch {
+                AppLog.probes.error("Gemini: API probe failed after token refresh: \(error)")
+                throw error
             }
         }
     }
