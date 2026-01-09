@@ -20,7 +20,9 @@ struct ClaudeBarApp: App {
     #endif
 
     init() {
-        AppLog.ui.info("ClaudeBar initializing...")
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        AppLog.ui.info("ClaudeBar v\(version) (\(build)) initializing...")
 
         // Create the shared repository
         // UserDefaultsProviderSettingsRepository implements all sub-protocols:

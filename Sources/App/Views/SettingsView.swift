@@ -105,6 +105,7 @@ struct SettingsContentView: View {
                     updatesCard
                     #endif
                     logsCard
+                    aboutCard
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 16)
@@ -1055,11 +1056,19 @@ struct SettingsContentView: View {
         }
     }
 
+    #endif
+
+    // MARK: - App Info (available for both Updates card and About card)
+
     /// The app version from the bundle
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
     }
-    #endif
+
+    /// The app build number from the bundle
+    private var appBuild: String {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+    }
 
     // MARK: - Logs Card
 
@@ -1132,6 +1141,91 @@ struct SettingsContentView: View {
 
             // Help text
             Text("Opens ClaudeBar.log in TextEdit")
+                .font(.system(size: 9, weight: .semibold, design: theme.fontDesign))
+                .foregroundStyle(theme.textTertiary)
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(theme.cardGradient)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(
+                            LinearGradient(
+                                colors: [theme.glassBorder, theme.glassBorder.opacity(0.5)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                )
+        )
+    }
+
+    // MARK: - About Card
+
+    private var aboutCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Header
+            HStack(spacing: 10) {
+                ZStack {
+                    Circle()
+                        .fill(theme.accentGradient)
+                        .frame(width: 32, height: 32)
+
+                    Image(systemName: "info.circle.fill")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("About")
+                        .font(.system(size: 14, weight: .bold, design: theme.fontDesign))
+                        .foregroundStyle(theme.textPrimary)
+
+                    Text("Version \(appVersion) (\(appBuild))")
+                        .font(.system(size: 10, weight: .medium, design: theme.fontDesign))
+                        .foregroundStyle(theme.textTertiary)
+                }
+
+                Spacer()
+            }
+
+            // GitHub Link
+            Link(destination: URL(string: "https://github.com/tddworks/claudebar")!) {
+                HStack(spacing: 6) {
+                    Image(systemName: "link")
+                        .font(.system(size: 11, weight: .semibold))
+
+                    Text("View on GitHub")
+                        .font(.system(size: 11, weight: .medium, design: theme.fontDesign))
+
+                    Spacer()
+
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 9, weight: .bold))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 0.2, green: 0.2, blue: 0.25),
+                                    Color(red: 0.15, green: 0.15, blue: 0.2)
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                )
+            }
+            .buttonStyle(.plain)
+
+            // Help text
+            Text("Report issues or contribute on GitHub")
                 .font(.system(size: 9, weight: .semibold, design: theme.fontDesign))
                 .foregroundStyle(theme.textTertiary)
         }
