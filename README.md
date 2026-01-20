@@ -6,6 +6,7 @@
 [![Latest Release](https://img.shields.io/github/v/release/tddworks/ClaudeBar)](https://github.com/tddworks/ClaudeBar/releases/latest)
 [![Swift 6.2](https://img.shields.io/badge/Swift-6.2-orange.svg)](https://swift.org)
 [![Platform](https://img.shields.io/badge/Platform-macOS%2015-blue.svg)](https://developer.apple.com)
+[![Homebrew](https://img.shields.io/badge/Homebrew-Install-brightgreen.svg)](https://formulae.brew.sh/cask/claudebar)
 
 A macOS menu bar application that monitors AI coding assistant usage quotas. Keep track of your Claude, Codex, Gemini, GitHub Copilot, Antigravity, and Z.ai usage at a glance.
 
@@ -70,6 +71,14 @@ A macOS menu bar application that monitors AI coding assistant usage quotas. Kee
   - [Z.ai](https://z.ai/subscribe) - Configure Claude Code with GLM Coding Plan endpoint
 
 ## Installation
+
+### Homebrew
+
+Install via [Homebrew](https://brew.sh).
+
+```bash
+brew install claudebar
+```
 
 ### Download (Recommended)
 
