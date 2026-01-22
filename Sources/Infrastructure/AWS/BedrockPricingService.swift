@@ -153,13 +153,27 @@ public final class AWSBedrockPricingService: BedrockPricingService, @unchecked S
                     continue
                 }
 
-                let price = Decimal(string: usdString) ?? 0
+                let rawPrice = Decimal(string: usdString) ?? 0
+                let unit = (dim["unit"] as? String)?.lowercased() ?? ""
+
+                // Convert price to per-1M tokens based on unit field
+                let pricePer1M: Decimal
+                if unit.contains("1m") || unit.contains("million") {
+                    // Already per 1M tokens
+                    pricePer1M = rawPrice
+                } else if unit.contains("1k") || unit.contains("thousand") {
+                    // Per 1K tokens - multiply by 1000
+                    pricePer1M = rawPrice * 1000
+                } else {
+                    // Assume per token - multiply by 1M
+                    pricePer1M = rawPrice * 1_000_000
+                }
 
                 // Determine if this is input or output pricing based on description
                 if description.lowercased().contains("input") {
-                    inputPrice = price * 1_000_000 // Convert from per-token to per-1M
+                    inputPrice = pricePer1M
                 } else if description.lowercased().contains("output") {
-                    outputPrice = price * 1_000_000
+                    outputPrice = pricePer1M
                 }
             }
         }

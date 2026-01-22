@@ -1,5 +1,37 @@
 import Foundation
 
+// MARK: - Shared Formatters
+
+/// Cached formatters for Bedrock models to avoid recreation overhead
+private enum BedrockFormatters {
+    /// Cached currency formatter for USD
+    static let currency: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = "USD"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        return formatter
+    }()
+
+    /// Format a token count for display (e.g., "1.2M" or "500K")
+    static func formatTokenCount(_ count: Int) -> String {
+        if count >= 1_000_000 {
+            return String(format: "%.1fM", Double(count) / 1_000_000)
+        } else if count >= 1_000 {
+            return String(format: "%.0fK", Double(count) / 1_000)
+        } else {
+            return "\(count)"
+        }
+    }
+
+    /// Format a price with currency symbol
+    static func formatCurrency(_ amount: Decimal) -> String {
+        currency.string(from: amount as NSDecimalNumber) ?? "$\(amount)"
+    }
+}
+
 // MARK: - BedrockModel
 
 /// Represents an AWS Bedrock model with its pricing information.
@@ -40,22 +72,12 @@ public struct BedrockModel: Sendable, Equatable, Hashable, Identifiable {
 
     /// Formatted input price (e.g., "$15.00 / 1M")
     public var formattedInputPrice: String {
-        formatPrice(inputPricePer1M)
+        BedrockFormatters.formatCurrency(inputPricePer1M) + " / 1M"
     }
 
     /// Formatted output price (e.g., "$75.00 / 1M")
     public var formattedOutputPrice: String {
-        formatPrice(outputPricePer1M)
-    }
-
-    private func formatPrice(_ price: Decimal) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "USD"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.minimumFractionDigits = 2
-        formatter.maximumFractionDigits = 2
-        return (formatter.string(from: price as NSDecimalNumber) ?? "$\(price)") + " / 1M"
+        BedrockFormatters.formatCurrency(outputPricePer1M) + " / 1M"
     }
 }
 
@@ -100,40 +122,24 @@ public struct BedrockModelUsage: Sendable, Equatable, Hashable {
 
     /// Formatted estimated cost (e.g., "$12.34")
     public var formattedCost: String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "USD"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.minimumFractionDigits = 2
-        formatter.maximumFractionDigits = 2
-        return formatter.string(from: estimatedCost as NSDecimalNumber) ?? "$\(estimatedCost)"
+        BedrockFormatters.formatCurrency(estimatedCost)
     }
 
     // MARK: - Token Formatting
 
     /// Formatted input tokens (e.g., "1.2M" or "500K")
     public var formattedInputTokens: String {
-        formatTokenCount(inputTokens)
+        BedrockFormatters.formatTokenCount(inputTokens)
     }
 
     /// Formatted output tokens (e.g., "500K")
     public var formattedOutputTokens: String {
-        formatTokenCount(outputTokens)
+        BedrockFormatters.formatTokenCount(outputTokens)
     }
 
     /// Formatted total tokens (e.g., "1.7M")
     public var formattedTotalTokens: String {
-        formatTokenCount(inputTokens + outputTokens)
-    }
-
-    private func formatTokenCount(_ count: Int) -> String {
-        if count >= 1_000_000 {
-            return String(format: "%.1fM", Double(count) / 1_000_000)
-        } else if count >= 1_000 {
-            return String(format: "%.0fK", Double(count) / 1_000)
-        } else {
-            return "\(count)"
-        }
+        BedrockFormatters.formatTokenCount(inputTokens + outputTokens)
     }
 }
 
@@ -209,40 +215,18 @@ public struct BedrockUsageSummary: Sendable, Equatable {
 
     /// Formatted total cost (e.g., "$57.23")
     public var formattedTotalCost: String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "USD"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.minimumFractionDigits = 2
-        formatter.maximumFractionDigits = 2
-        return formatter.string(from: totalCost as NSDecimalNumber) ?? "$\(totalCost)"
+        BedrockFormatters.formatCurrency(totalCost)
     }
 
     /// Formatted total tokens
     public var formattedTotalTokens: String {
-        formatTokenCount(totalTokens)
+        BedrockFormatters.formatTokenCount(totalTokens)
     }
 
     /// Formatted daily budget (e.g., "$50.00")
     public var formattedDailyBudget: String? {
         guard let budget = dailyBudget else { return nil }
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "USD"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.minimumFractionDigits = 2
-        formatter.maximumFractionDigits = 2
-        return formatter.string(from: budget as NSDecimalNumber) ?? "$\(budget)"
-    }
-
-    private func formatTokenCount(_ count: Int) -> String {
-        if count >= 1_000_000 {
-            return String(format: "%.1fM", Double(count) / 1_000_000)
-        } else if count >= 1_000 {
-            return String(format: "%.0fK", Double(count) / 1_000)
-        } else {
-            return "\(count)"
-        }
+        return BedrockFormatters.formatCurrency(budget)
     }
 
     // MARK: - Budget Calculation

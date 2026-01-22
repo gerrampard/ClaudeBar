@@ -1145,10 +1145,15 @@ struct BedrockUsageCard: View {
         .onAppear { animateIn = true }
     }
 
-    private var formattedPeriodStart: String {
+    // Cached formatter to avoid recreation overhead
+    private static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "h:mm a"
-        return formatter.string(from: usage.periodStart)
+        return formatter
+    }()
+
+    private var formattedPeriodStart: String {
+        Self.timeFormatter.string(from: usage.periodStart)
     }
 }
 

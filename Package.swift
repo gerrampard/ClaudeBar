@@ -44,6 +44,7 @@ let package = Package(
                 .product(name: "AWSCloudWatch", package: "aws-sdk-swift"),
                 .product(name: "AWSSTS", package: "aws-sdk-swift"),
                 .product(name: "AWSPricing", package: "aws-sdk-swift"),
+                .product(name: "AWSSDKIdentity", package: "aws-sdk-swift"),
             ],
             path: "Sources/Infrastructure",
             swiftSettings: [

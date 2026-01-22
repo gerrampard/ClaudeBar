@@ -151,11 +151,15 @@ public struct BedrockUsageProbe: UsageProbe {
             // Convert budget percentage used to percentage remaining
             let percentRemaining = max(0, 100 - percentUsed)
 
+            // Calculate midnight tomorrow using Calendar to handle DST correctly
+            let today = Calendar.current.startOfDay(for: Date())
+            let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today) ?? today.addingTimeInterval(86400)
+
             let quota = UsageQuota(
                 percentRemaining: percentRemaining,
                 quotaType: .modelSpecific("Daily Budget"),
                 providerId: "bedrock",
-                resetsAt: Calendar.current.startOfDay(for: Date()).addingTimeInterval(86400) // Midnight tomorrow
+                resetsAt: tomorrow
             )
             quotas.append(quota)
         }
