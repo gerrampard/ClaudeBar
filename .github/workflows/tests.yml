@@ -9,40 +9,78 @@ on:
 jobs:
   test:
     name: Unit Tests with Coverage
-    runs-on: macos-15
+    runs-on: macos-26
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Swift
-        uses: SwiftyLab/setup-swift@latest
-        with:
-          swift-version: "6.2"
+      - name: Get Swift version
+        run: swift --version
 
-      - name: Resolve Dependencies
-        run: swift package resolve
-
-      - name: Build
-        run: swift build
+      - name: Install Tuist
+        run: brew install --cask tuist
 
       - name: Run Tests with Coverage
-        run: |
-          swift test --enable-code-coverage --parallel
+        run: tuist test --result-bundle-path TestResults.xcresult -- -enableCodeCoverage YES -skipMacroValidation
 
       - name: Generate Coverage Report
         run: |
-          BIN_PATH=$(swift build --show-bin-path)
-          XCTEST_PATH=$(find ${BIN_PATH} -name "*.xctest" -type d | head -1)
-          COV_BIN="${XCTEST_PATH}/Contents/MacOS/$(basename ${XCTEST_PATH} .xctest)"
-          PROFDATA=$(find .build -name "default.profdata" -type f | head -1)
+          # Convert xcresult to JSON
+          xcrun xccov view --report --json TestResults.xcresult > coverage_report.json
 
-          xcrun llvm-cov export \
-            -format="lcov" \
-            -instr-profile="${PROFDATA}" \
-            "${COV_BIN}" \
-            -ignore-filename-regex=".build|Tests|Sources/App/Views|Sources/Infrastructure/Adapters" \
-            > coverage.lcov
+          # Convert to lcov format
+          python3 << 'EOF'
+          import json
+
+          with open('coverage_report.json', 'r') as f:
+              data = json.load(f)
+
+          with open('coverage.lcov', 'w') as lcov:
+              for target in data.get('targets', []):
+                  target_name = target.get('name', '')
+                  # Skip test targets and external dependencies
+                  if 'Tests' in target_name or 'Mockable' in target_name:
+                      continue
+
+                  for file_info in target.get('files', []):
+                      file_path = file_info.get('path', '')
+
+                      # Skip App layer, Infrastructure/Adapters, Preview files and generated files
+                      if '/App/' in file_path or '/Infrastructure/Adapters/' in file_path or 'Preview' in file_path or '/Derived/' in file_path:
+                          continue
+
+                      lcov.write(f"SF:{file_path}\n")
+
+                      fn_found = 0
+                      fn_hit = 0
+                      lines_found = 0
+                      lines_hit = 0
+
+                      for function in file_info.get('functions', []):
+                          name = function.get('name', 'unknown')
+                          line = function.get('lineNumber', 0)
+                          count = function.get('executionCount', 0)
+                          exec_lines = function.get('executableLines', 0)
+                          covered_lines = function.get('coveredLines', 0)
+
+                          lcov.write(f"FN:{line},{name}\n")
+                          lcov.write(f"FNDA:{count},{name}\n")
+                          fn_found += 1
+                          if count > 0:
+                              fn_hit += 1
+
+                          lines_found += exec_lines
+                          lines_hit += covered_lines
+
+                      lcov.write(f"FNF:{fn_found}\n")
+                      lcov.write(f"FNH:{fn_hit}\n")
+                      lcov.write(f"LF:{lines_found}\n")
+                      lcov.write(f"LH:{lines_hit}\n")
+                      lcov.write("end_of_record\n")
+
+          print("Generated coverage.lcov")
+          EOF
 
       - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v5
