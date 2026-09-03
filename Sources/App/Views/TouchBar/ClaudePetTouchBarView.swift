@@ -71,10 +71,35 @@ public final class ClaudePetTouchBarView: NSView {
     public var gauges: [TouchBarProviderGauge] = [] {
         didSet {
             cachedIcons = gauges.map { loadProviderIcon(for: $0.providerId) }
+            if x > petRightBoundary {
+                x = petRightBoundary
+                dir = -1
+            }
             needsDisplay = true
         }
     }
     private var cachedIcons: [NSImage?] = []
+
+    // Readout layout metrics
+    private var cellGap: CGFloat { 12.0 }
+
+    private var readoutWidth: CGFloat {
+        guard !gauges.isEmpty else { return 0 }
+        let n = CGFloat(gauges.count)
+        let desired = n * 170.0 + (n - 1) * cellGap
+        return min(380.0, max(200.0, desired))
+    }
+
+    private var readoutStartX: CGFloat {
+        guard !gauges.isEmpty else { return bounds.width }
+        return bounds.width - readoutWidth - 8.0
+    }
+
+    /// Safe boundary for Clawd so he turns around comfortably before hitting the progress bar or provider icon
+    private var petRightBoundary: CGFloat {
+        // Clawd half-width is 17.2pt. Adding 42pt margin ensures a clean ~25pt gap before the first cell.
+        return max(40.0, readoutStartX - 42.0)
+    }
 
     // Frame timer
     private var timer: Timer?
@@ -145,8 +170,8 @@ public final class ClaudePetTouchBarView: NSView {
         let maxUsage = gauges.map(\.percentUsed).max() ?? 0
         let mood = Mood.from(usage: maxUsage)
 
-        let readoutW = min(380.0, CGFloat(max(1, gauges.count)) * 170.0)
-        let wall = bounds.width - readoutW - 25.0
+        let rightLimit = petRightBoundary
+        let pad: CGFloat = 24.0
 
         if dragging {
             phase += dt * 17.0
@@ -158,8 +183,8 @@ public final class ClaudePetTouchBarView: NSView {
         if abs(throwVX) > 1.0 {
             x += throwVX * dt
             throwVX *= 0.92
-            let lo: CGFloat = 20.0
-            let hi: CGFloat = max(lo + 10, wall)
+            let lo: CGFloat = pad
+            let hi: CGFloat = rightLimit
             if x < lo { x = lo; throwVX = -throwVX * 0.5; dir = 1 }
             if x > hi { x = hi; throwVX = -throwVX * 0.5; dir = -1 }
             phase += dt * (abs(throwVX) / 9.0)
@@ -169,9 +194,6 @@ public final class ClaudePetTouchBarView: NSView {
 
         // Pacing walk
         x += dir * mood.speed * dt
-        let pad: CGFloat = 24.0
-        let rightLimit = max(pad + 10, wall)
-
         if x > rightLimit { x = rightLimit; dir = -1 }
         if x < pad { x = pad; dir = 1 }
 
@@ -185,11 +207,8 @@ public final class ClaudePetTouchBarView: NSView {
         guard let touch = event.touches(matching: .any, in: self).first else { return }
         let tx = touch.location(in: self).x
 
-        let readoutW = min(380.0, CGFloat(max(1, gauges.count)) * 170.0)
-        let readoutX = bounds.width - readoutW - 8.0
-
         // Tap on readout area -> open ClaudeBar
-        if tx >= readoutX {
+        if tx >= readoutStartX - 10.0 {
             NSWorkspace.shared.open(URL(string: "claudebar://open")!)
             return
         }
@@ -210,9 +229,7 @@ public final class ClaudePetTouchBarView: NSView {
         dragVX = tx - lastDragX
         lastDragX = tx
 
-        let readoutW = min(380.0, CGFloat(max(1, gauges.count)) * 170.0)
-        let wall = bounds.width - readoutW - 25.0
-        x = max(20.0, min(nx, wall))
+        x = max(24.0, min(nx, petRightBoundary))
 
         if abs(dragVX) > 0.5 { dir = (dragVX > 0) ? 1 : -1 }
         needsDisplay = true
@@ -331,10 +348,9 @@ public final class ClaudePetTouchBarView: NSView {
         guard !gauges.isEmpty else { return }
 
         let n = CGFloat(gauges.count)
-        let cellGap: CGFloat = 12.0
-        let totalReadoutW = min(380.0, max(200.0, n * 170.0 + (n - 1) * cellGap))
+        let totalReadoutW = readoutWidth
         let cellW = (totalReadoutW - cellGap * (n - 1)) / n
-        let startX = bounds.width - totalReadoutW - 8.0
+        let startX = readoutStartX
 
         for (i, gauge) in gauges.enumerated() {
             let cx = startX + CGFloat(i) * (cellW + cellGap)
