@@ -42,5 +42,18 @@
 	<string>https://tddworks.github.io/ClaudeBar/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>2Kn6vvvrrNqgAWrzOiq5Ae+abMjEqlu2MOOM/YBlsw0=</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>CFBundleURLName</key>
+			<string>com.tddworks.claudebar</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>claudebar</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
