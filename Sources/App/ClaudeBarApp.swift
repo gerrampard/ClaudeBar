@@ -180,7 +180,8 @@ struct ClaudeBarApp: App {
 
         PersistentTouchBarDriver.shared.configure(
             monitor: monitor,
-            settings: AppSettings.shared
+            settings: AppSettings.shared,
+            sessionMonitor: sessionMonitor
         )
         PersistentTouchBarDriver.shared.start()
 

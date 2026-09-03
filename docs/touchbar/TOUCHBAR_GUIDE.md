@@ -49,18 +49,81 @@ The native Touch Bar driver (`PersistentTouchBarDriver`) runs completely inside 
 On the left side of the Touch Bar, ClaudeBar displays **Clawd**, an animated 20×20 retro pixel mascot pacing along an illuminated ground line.
 
 #### Mood-Reactive Behavior
-Clawd automatically reflects your highest quota consumption across all active gauges:
+Clawd automatically reflects your highest quota consumption and the overall quota status across all active gauges:
 
-| Mood | Highest Usage | Speed | Visuals & Animation |
-|---|---|---|---|
-| **Calm** | < 30% | 12 pt/s | Relaxed stroll, terracotta/coral body color (`#CD7F6A`) |
-| **Brisk** | 30% – 59% | 24 pt/s | Upbeat, brisk walking pace |
-| **Tired** | 60% – 84% | 8 pt/s | Sluggish movement with animated falling blue sweat drop (`#6BB2F0`) |
-| **Panic** | ≥ 85% | 48 pt/s | Rapid frantic scurry, alert reddish body tint (`#DC4D38`), and trailing motion blur streaks |
+| Mood | Trigger | Speed | Body Color | Eyes | Visuals |
+|---|---|---|---|---|---|
+| **Calm** | Usage < 30% | 12 pt/s | Terracotta + provider tint | Normal dots | Relaxed stroll |
+| **Brisk** | Usage 30–59% | 24 pt/s | Terracotta + provider tint | Normal dots | Upbeat walk |
+| **Tired** | Usage 60–84% | 8 pt/s | Terracotta + provider tint | Drooping (row lower) | Sluggish, animated blue sweat drop |
+| **Panic** | Usage ≥ 85% | 48 pt/s | Alert red tint | Wide, spread apart | Frantic scurry + trailing motion streaks |
+| **Depleted** | All quota at 0% | — | Flat grey | Flat bars `— —` | Clawd collapses and lies flat on the ground |
+| **Sleeping** | Idle > 30 s | 3 pt/s | Dimmed terracotta | Flat bars `— —` | Slow drift, `zzz` bubbles float upward |
+
+#### Expression System
+Clawd's eyes change shape based on mood — each state uses a distinct pixel pattern drawn directly onto the 20×20 sprite grid:
+- **Calm / Brisk**: Single dot per eye (standard)
+- **Tired**: Drooping dots — shifted one row lower
+- **Panic**: Two-pixel wide eyes set further apart
+- **Depleted / Sleeping**: Flat horizontal bars `—— ——`
+
+#### Provider Body Color Tint
+Clawd's body shifts color subtly (30% brand tint blended with 70% base terracotta) to reflect which AI provider is currently active:
+
+| Provider | Tint |
+|---|---|
+| Claude | Base terracotta (no tint) |
+| Gemini | Golden amber |
+| Copilot | Indigo blue |
+| Antigravity | Violet |
+| Codex | Teal |
+| DeepSeek | Cobalt blue |
+| Cursor | Cyan |
+| Kimi | Sky blue |
+| Bedrock | Warm amber |
+| Mistral | Bright orange |
+| Grok / Vercel | Near-white |
+| MiniMax | Red-pink |
+| Z.ai | Azure |
+| AmpCode | Hot red |
+| Oh My Pi | Mint green |
+| Kiro | Purple |
+| OpenCode | Lavender |
+
+#### Event-Driven Reactions
+Clawd responds instantly to state changes — not just continuous usage levels:
+
+| Event | Reaction |
+|---|---|
+| **Status degrades** (healthy→warning→critical) | Body flashes white for 0.12 s + `!` particle floats upward from head |
+| **Quota resets** (status improves) | Two `✦` sparkle particles burst from head |
+| **Provider switches** | Clawd jumps upward with a bounce arc (85 pt) and reverses direction to face the new provider |
+| **Quota refresh triggered** (Touch Bar button) | `?` orbits above Clawd's head in a small arc for 1.5 s |
+| **Idle > 15 s** | Clawd stops walking and stands still |
+| **Idle > 30 s** | Clawd enters **Sleeping** mood — eyes close, `zzz` particles drift up every 2 s |
+| **Any touch** | Idle timer resets; Clawd immediately wakes and resumes walking |
+
+#### Context-Aware Behaviors
+
+| Context | Behavior |
+|---|---|
+| **Active Claude Code session** | Speed multiplied ×1.5 (session sprint) + subtle orange glow ring beneath feet |
+| **Night mode** (22:00–04:59 local) | Speed reduced ×0.6 + tiny `✦` star particles drift upward every 4 s |
+| **Christmas theme** | A small red pixel Santa hat with white brim and pompom appears on Clawd's head |
+
+#### Particle System
+All floating effects share a unified particle engine — each particle has independent velocity, fade-out alpha, and glyph:
+
+| Glyph | Meaning | Trigger |
+|---|---|---|
+| `!` | Status alert | Quota level degraded |
+| `✦` | Sparkle | Quota reset / night stars |
+| `z` | Zzz | Idle sleeping |
+| `?` | Refresh pulse | Quota refresh in progress |
 
 #### Direct Touch Interaction
-- **Touch & Drag**: Tap and drag Clawd anywhere along the Touch Bar track.
-- **Flick & Throw Physics**: Fling Clawd with your finger; he slides with realistic velocity, friction decay (`0.92` damping), and bounces off boundaries.
+- **Touch & Drag**: Tap and grab Clawd to drag him anywhere along the Touch Bar.
+- **Flick & Throw Physics**: Fling Clawd with your finger; he slides with realistic velocity, friction decay (`0.92` damping), and elastic bounces off boundaries.
 - **Boundary Intelligence**: Clawd automatically detects the start position of the quota gauges and turns around smoothly without colliding into the progress bars.
 
 ---
