@@ -1,5 +1,4 @@
 import AppKit
-import CoreGraphics
 import Domain
 import Infrastructure
 
@@ -12,7 +11,7 @@ public final class PersistentTouchBarDriver: NSObject, NSTouchBarDelegate {
     public static let shared = PersistentTouchBarDriver()
 
     private let sceneId = NSTouchBarItem.Identifier("com.tddworks.claudebar.touchbar.scene")
-    private let escId = NSTouchBarItem.Identifier("com.tddworks.claudebar.touchbar.esc")
+    private let emptyId = NSTouchBarItem.Identifier("com.tddworks.claudebar.touchbar.empty")
 
     private var touchBar: NSTouchBar?
     private var petView: ClaudePetTouchBarView?
@@ -43,7 +42,7 @@ public final class PersistentTouchBarDriver: NSObject, NSTouchBarDelegate {
         let bar = NSTouchBar()
         bar.delegate = self
         bar.defaultItemIdentifiers = [sceneId]
-        bar.escapeKeyReplacementItemIdentifier = escId
+        bar.escapeKeyReplacementItemIdentifier = emptyId
         self.touchBar = bar
 
         // 2. Continuous State Sync
@@ -104,108 +103,117 @@ public final class PersistentTouchBarDriver: NSObject, NSTouchBarDelegate {
             return []
         }
 
-        let label = monitor.menuBarLabel(
-            providerId: settings.menuBarPercentageProviderId,
-            primaryQuotaKey: settings.menuBarPercentageQuotaKey,
-            secondaryQuotaKey: settings.menuBarSecondaryQuotaKey,
-            showPercentage: settings.menuBarPercentageEnabled,
-            showDuration: settings.menuBarDurationEnabled,
-            mode: settings.usageDisplayMode,
-            burnRateWarningEnabled: settings.burnRateWarningEnabled,
-            burnRateThreshold: settings.burnRateThreshold
-        )
+        let providerId = settings.menuBarPercentageProviderId
+        // Find provider configured in Settings > Menu bar
+        guard let provider = monitor.provider(for: providerId) ?? monitor.selectedProvider else {
+            return []
+        }
 
-        var gauges: [TouchBarProviderGauge] = []
+        let snapshot = provider.snapshot
+        let quotas = snapshot?.quotas ?? []
 
-        if let label, !label.segments.isEmpty {
-            for seg in label.segments {
-                let pid = resolveProviderId(forSegmentText: seg.text)
-                let name = resolveProviderName(forId: pid, fallbackText: seg.text)
-                let pct = parsePercentage(from: seg.text)
-                let resetText = parseResetText(from: seg.text)
+        // Resolve primary quota: match by configured key or fallback to first quota
+        let primaryQuota = quotas.first { $0.quotaType.quotaKey == settings.menuBarPercentageQuotaKey }
+            ?? quotas.first
 
-                gauges.append(TouchBarProviderGauge(
-                    providerId: pid,
-                    name: name,
-                    percentUsed: pct,
-                    resetText: resetText,
-                    status: seg.status
-                ))
-            }
-        } else if let selected = monitor.selectedProvider {
-            let pid = selected.id
-            let pct: Double
-            if let lowest = selected.snapshot?.lowestQuota {
-                pct = Double(lowest.percentUsed)
-            } else {
-                pct = 0
-            }
-            let resetText: String?
-            if let resetsAt = selected.snapshot?.lowestQuota?.resetsAt {
-                let diff = Int(resetsAt.timeIntervalSinceNow)
-                if diff > 0 {
-                    let h = diff / 3600
-                    let m = (diff % 3600) / 60
-                    resetText = h > 0 ? "\(h)h\(m)m" : "\(m)m"
-                } else {
-                    resetText = nil
-                }
-            } else {
-                resetText = nil
-            }
+        // Resolve secondary quota if configured
+        let secondaryQuota: UsageQuota?
+        if !settings.menuBarSecondaryQuotaKey.isEmpty,
+           settings.menuBarSecondaryQuotaKey != settings.menuBarPercentageQuotaKey {
+            secondaryQuota = quotas.first { $0.quotaType.quotaKey == settings.menuBarSecondaryQuotaKey }
+        } else {
+            secondaryQuota = nil
+        }
 
-            gauges.append(TouchBarProviderGauge(
-                providerId: pid,
-                name: selected.name,
+        var items: [UsageQuota?] = []
+        if let primaryQuota, let secondaryQuota {
+            items = [primaryQuota, secondaryQuota]
+        } else if let primaryQuota {
+            items = [primaryQuota]
+        } else {
+            items = [nil]
+        }
+
+        let isMultiple = items.count > 1
+        return items.map { quota in
+            let (gaugeProviderId, gaugeName) = resolveIdentity(
+                for: quota,
+                provider: provider,
+                isMultiple: isMultiple,
+                settings: settings
+            )
+            let pct = quota.map { max(0, min(100, Double($0.percentUsed))) } ?? 0.0
+            let resetText = quota.flatMap { formatResetText(for: $0) }
+            let status = quota?.status ?? snapshot?.overallStatus ?? .healthy
+
+            return TouchBarProviderGauge(
+                providerId: gaugeProviderId,
+                name: gaugeName,
                 percentUsed: pct,
                 resetText: resetText,
-                status: selected.snapshot?.overallStatus ?? .healthy
-            ))
+                status: status
+            )
         }
-
-        return gauges
     }
 
-    private func resolveProviderId(forSegmentText text: String) -> String {
-        guard let monitor, let settings else { return "claude" }
-        let lower = text.lowercased()
-        for provider in monitor.allProviders {
-            let pid = provider.id.lowercased()
-            let pname = provider.name.lowercased()
-            if lower.contains(pname) || lower.contains(pid) {
-                return provider.id
+    private func resolveIdentity(
+        for quota: UsageQuota?,
+        provider: any AIProvider,
+        isMultiple: Bool,
+        settings: AppSettings
+    ) -> (providerId: String, name: String) {
+        if provider.id.lowercased() == "antigravity" {
+            // Antigravity is a multi-model provider hosting Claude and Gemini pools
+            let quotaKey = quota?.quotaType.quotaKey ?? settings.menuBarPercentageQuotaKey
+            let title = (quota?.menuBarTitle ?? quota?.compactTitle ?? quota?.quotaType.displayName ?? "").lowercased()
+            let group = (quota?.group ?? "").lowercased()
+            let keyLower = quotaKey.lowercased()
+
+            if keyLower.contains("claude") || title.contains("claude") || group.contains("claude") {
+                let suffix = (isMultiple && keyLower.contains("weekly")) ? " 7d" : ""
+                return ("claude", "Claude\(suffix)")
+            } else if keyLower.contains("gemini") || title.contains("gemini") || group.contains("gemini") {
+                let suffix = (isMultiple && keyLower.contains("weekly")) ? " 7d" : ""
+                return ("gemini", "Gemini\(suffix)")
+            }
+            return ("antigravity", "Antigravity")
+        }
+
+        // For all other providers (Claude, Codex, Gemini, Grok, etc.)
+        let baseName = provider.name
+        if isMultiple, let quota {
+            let compact = quota.compactTitle ?? quota.quotaType.shortLabel
+            if !compact.isEmpty, !baseName.localizedCaseInsensitiveContains(compact) {
+                return (provider.id, "\(baseName) \(compact)")
             }
         }
-        return settings.menuBarPercentageProviderId
+        return (provider.id, baseName)
     }
 
-    private func resolveProviderName(forId id: String, fallbackText: String) -> String {
-        if let provider = monitor?.provider(for: id) {
-            return provider.name
+    private func formatResetText(for quota: UsageQuota) -> String? {
+        if let compact = quota.compactResetTime, !compact.isEmpty {
+            return compact
         }
-        // Extract words before numbers
-        let parts = fallbackText.split(separator: " ")
-        if let first = parts.first {
-            return String(first)
-        }
-        return id.capitalized
-    }
-
-    private func parsePercentage(from text: String) -> Double {
-        // Find percentage like "62%" in "Gemini 62%"
-        if let pctRange = text.range(of: #"(\d+)%"#, options: .regularExpression) {
-            let numStr = text[pctRange].dropLast()
-            if let val = Double(numStr) {
-                return max(0, min(100, val))
+        if let resetsAt = quota.resetsAt {
+            let diff = Int(resetsAt.timeIntervalSinceNow)
+            guard diff > 0 else { return nil }
+            if diff >= 86400 {
+                return "\(diff / 86400)d"
+            } else if diff >= 3600 {
+                let h = diff / 3600
+                let m = (diff % 3600) / 60
+                return String(format: "%d:%02d", h, m)
+            } else {
+                let m = max(1, diff / 60)
+                return "\(m)m"
             }
         }
-        return 0
-    }
-
-    private func parseResetText(from text: String) -> String? {
-        // Look for duration pattern like "· 2h15" or "45m"
-        if let dotRange = text.range(of: "· ") {
-            return String(text[dotRange.upperBound...])
+        if let raw = quota.resetText, !raw.isEmpty {
+            let trimmed = raw
+                .replacingOccurrences(of: "Resets in ", with: "")
+                .replacingOccurrences(of: "Resets ", with: "")
+                .trimmingCharacters(in: .whitespaces)
+            return trimmed.isEmpty ? nil : trimmed
         }
         return nil
     }
@@ -242,6 +250,9 @@ public final class PersistentTouchBarDriver: NSObject, NSTouchBarDelegate {
             let presentModal = unsafeBitCast(imp, to: PresentModalFunc.self)
             presentModal(NSTouchBar.self, sel, touchBar, 0, nil)
             isPresented = true
+            DispatchQueue.main.async { [weak self] in
+                self?.hideCloseButtons()
+            }
         }
     }
 
@@ -258,6 +269,30 @@ public final class PersistentTouchBarDriver: NSObject, NSTouchBarDelegate {
         }
     }
 
+    private func hideCloseButtons() {
+        guard let cls = NSClassFromString("NSFunctionRow") as? NSObject.Type else { return }
+        let sel = NSSelectorFromString("_topLevelFunctionRowViews")
+        guard cls.responds(to: sel),
+              let views = cls.perform(sel)?.takeUnretainedValue() as? [NSView] else { return }
+        for topView in views {
+            stripCloseButtons(in: topView)
+        }
+    }
+
+    private func stripCloseButtons(in view: NSView) {
+        if let btn = view as? NSButton {
+            let title = btn.title.lowercased()
+            let imgName = btn.image?.name() ?? ""
+            if title == "x" || title == "esc" || imgName.contains("close") || imgName.contains("dismiss") || btn.action == NSSelectorFromString("dismiss:") {
+                btn.isHidden = true
+                btn.frame = .zero
+            }
+        }
+        for sub in view.subviews {
+            stripCloseButtons(in: sub)
+        }
+    }
+
     // MARK: - NSTouchBarDelegate
 
     public func touchBar(_ touchBar: NSTouchBar, makeItemForIdentifier identifier: NSTouchBarItem.Identifier) -> NSTouchBarItem? {
@@ -265,21 +300,13 @@ public final class PersistentTouchBarDriver: NSObject, NSTouchBarDelegate {
             let item = NSCustomTouchBarItem(identifier: identifier)
             item.view = petView
             return item
-        } else if identifier == escId {
+        } else if identifier == emptyId {
             let item = NSCustomTouchBarItem(identifier: identifier)
-            let btn = NSButton(title: "esc", target: self, action: #selector(sendEscape))
-            btn.bezelColor = .controlColor
-            item.view = btn
+            let empty = NSView(frame: NSRect(x: 0, y: 0, width: 0, height: 30))
+            empty.isHidden = true
+            item.view = empty
             return item
         }
         return nil
-    }
-
-    @objc private func sendEscape() {
-        if let down = CGEvent(keyboardEventSource: nil, virtualKey: 53, keyDown: true),
-           let up = CGEvent(keyboardEventSource: nil, virtualKey: 53, keyDown: false) {
-            down.post(tap: .cghidEventTap)
-            up.post(tap: .cghidEventTap)
-        }
     }
 }
