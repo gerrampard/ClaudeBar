@@ -58,7 +58,7 @@ struct GeneralPane: View {
 
                 SettingsRow(
                     title: "Touch Bar",
-                    subtitle: "Show quota and status on the Touch Bar (via BetterTouchTool / MTMR)."
+                    subtitle: "Show persistent quota and status on the MacBook Touch Bar."
                 ) {
                     SettingsSwitch(isOn: $settings.touchBarEnabled)
                 }
