@@ -1,83 +1,203 @@
-# การแสดงผล ClaudeBar บน Touch Bar (MacBook Pro M1)
+# ClaudeBar on MacBook Touch Bar
 
-คู่มือนี้แนะนำวิธีการนำข้อมูลโควต้าจาก ClaudeBar มาแสดงผลบนแถบ Touch Bar ของ MacBook Pro 13" (M1 / M2) แบบค้างไว้ตลอดเวลา โดยใช้ **BetterTouchTool (BTT)** หรือ **MTMR**
+ClaudeBar features comprehensive Touch Bar integration designed specifically for MacBook Pro models equipped with an Apple Touch Bar (13-inch M1 / M2, 15 / 16-inch Intel models).
 
----
+It offers two integration modes:
+1. **Native Touch Bar (Primary & Recommended)**: Built directly into ClaudeBar using Swift and AppKit. Requires **zero third-party software**, operates system-wide across all applications, and includes an interactive pixel mascot alongside live quota gauges.
+2. **External Integration (Optional)**: Exported status integration via `~/.claudebar/status.json` for users who prefer configuring widgets in **BetterTouchTool (BTT)** or **MTMR**.
 
-## สารบัญ
-1. [การทำงาน](#การทำงาน)
-2. [วิธีที่ 1: ติดตั้งผ่าน BetterTouchTool (แนะนำ)](#วิธีที่-1-ติดตั้งผ่าน-bettertouchtool-แนะนำ)
-3. [วิธีที่ 2: ติดตั้งผ่าน MTMR (ฟรีและ Open Source)](#วิธีที่-2-ติดตั้งผ่าน-mtmr-ฟรีและ-open-source)
-4. [คำสั่งลัด (URL Scheme)](#คำสั่งลัด-url-scheme)
-5. [การแก้ปัญหา (Troubleshooting)](#การแก้ปัญหา-troubleshooting)
-
----
-
-## การทำงาน
-
-ClaudeBar จะทำการ sync ข้อมูลโควต้าล่าสุดลงในไฟล์ `~/.claudebar/status.json` โดยอัตโนมัติทุกครั้งที่:
-- สถานะโควต้าเปลี่ยน
-- มีการรีเฟรชโควต้า
-- มีการสลับ Provider
-
-สคริปต์ [scripts/touchbar_status.py](file:///Users/jzd101/Documents/ClaudeBar/scripts/touchbar_status.py) จะอ่านไฟล์นี้และแปลงผลเป็นสี, รูปไอคอนจริงของ Provider และข้อความสำหรับ Touch Bar โดยใช้ CPU และแบตเตอรี่แทบจะเป็น 0
-
-### รูปไอคอนจริงของ Provider (Real Provider Icons)
-รูปภาพไอคอนจริงของแต่ละ Provider (PNG แบบ Transparent) ถูกรวบรวมไว้ที่ `scripts/icons/` และ `~/.claudebar/icons/` ครบทุกค่าย:
-- **Claude** (Anthropic)
-- **OpenAI / Codex**
-- **Google Gemini**
-- **GitHub Copilot**
-- **Cursor**
-- **DeepSeek**
-- **Alibaba Qwen**
-- **Google Antigravity**
-- **xAI Grok**
-- **AWS Bedrock**
-- **Moonshot Kimi**
-- **MiniMax**
-- **Mistral**
-- **Z.ai**
-- **Vercel**, **AmpCode**, **OpenCode**, **Oh My Pi**, **Kiro**
-
-เมื่อรันด้วยคำสั่ง `--btt` สคริปต์จะส่ง `icon_path` ชี้ไปยังไฟล์รูปจริงของ Provider นั้นๆ ให้ BetterTouchTool นำไปเรนเดอร์บน Touch Bar ทันที
+<p align="center">
+  <img src="../screenshots/TouchBar-preview.png" alt="ClaudeBar Touch Bar Preview" width="100%"/>
+</p>
 
 ---
 
-## วิธีที่ 1: ติดตั้งผ่าน BetterTouchTool (แนะนำ)
+## Table of Contents
 
-BetterTouchTool (BTT) สามารถแสดง Widget บน Touch Bar ค้างไว้ตลอดเวลา พร้อมเปลี่ยนสีพื้นหลังตามสถานะ (เขียว/ส้ม/แดง)
+1. [Native Touch Bar (Zero Setup)](#1-native-touch-bar-zero-setup)
+   - [System-Wide Persistence](#system-wide-persistence)
+   - [Interactive Pixel Mascot (Clawd)](#interactive-pixel-mascot-clawd)
+   - [Live Quota Gauges & Dynamic Coloring](#live-quota-gauges--dynamic-coloring)
+   - [Multi-Model & Pool Intelligence (e.g. Antigravity)](#multi-model--pool-intelligence)
+   - [One-Tap Interactions](#one-tap-interactions)
+2. [In-App Contextual Touch Bar](#2-in-app-contextual-touch-bar)
+3. [Configuration & Settings](#3-configuration--settings)
+4. [External Integration: BetterTouchTool & MTMR](#4-external-integration-bettertouchtool--mtmr)
+   - [Status File Architecture (`status.json`)](#status-file-architecture-statusjson)
+   - [Method A: BetterTouchTool Setup](#method-a-bettertouchtool-setup)
+   - [Method B: MTMR Setup](#method-b-mtmr-setup)
+   - [CLI Helper Script (`touchbar_status.py`)](#cli-helper-script-touchbar_statuspy)
+5. [URL Schemes](#5-url-schemes)
+6. [Troubleshooting](#6-troubleshooting)
 
-### ขั้นตอนการตั้งค่า:
+---
 
-1. เปิดแอพ **BetterTouchTool**
-2. เลือกแท็บ **Touch Bar** ที่เมนูด้านบน
-3. เลือก **All Apps** ในคอลัมน์ซ้ายสุด (เพื่อให้แสดงผลในทุกโปรแกรม)
-4. กดปุ่ม **+ (Add Widget)** ที่แถบด้านล่าง
-5. ค้นหาและเลือก **"Shell Script / Task Widget"**
-6. ตั้งค่า Widget ดังนี้:
+## 1. Native Touch Bar (Zero Setup)
+
+The native Touch Bar driver (`PersistentTouchBarDriver`) runs completely inside the ClaudeBar app process with no dependencies on external tools.
+
+### System-Wide Persistence
+
+- **Modal Function Bar Presentation (`placement: 0`)**: ClaudeBar presents its Touch Bar interface at the macOS system-modal level. This keeps the widget visible at all times, regardless of which application or full-screen space is active.
+- **Automatic Lifecycle Re-Assertion**: Automatically re-asserts itself when you switch applications (`NSWorkspace.didActivateApplicationNotification`) or unlock your Mac screen (`com.apple.screenIsUnlocked`).
+- **Preserves System Controls**: Intelligently suppresses intrusive dismiss/close buttons (`DFRSystemModalShowsCloseBoxWhenFrontMost(false)`) and uses an empty Escape replacement item, leaving your system Control Strip (volume, brightness, media controls) and Escape key completely functional.
+
+---
+
+### Interactive Pixel Mascot (Clawd)
+
+On the left side of the Touch Bar, ClaudeBar displays **Clawd**, an animated 20×20 retro pixel mascot pacing along an illuminated ground line.
+
+#### Mood-Reactive Behavior
+Clawd automatically reflects your highest quota consumption across all active gauges:
+
+| Mood | Highest Usage | Speed | Visuals & Animation |
+|---|---|---|---|
+| **Calm** | < 30% | 12 pt/s | Relaxed stroll, terracotta/coral body color (`#CD7F6A`) |
+| **Brisk** | 30% – 59% | 24 pt/s | Upbeat, brisk walking pace |
+| **Tired** | 60% – 84% | 8 pt/s | Sluggish movement with animated falling blue sweat drop (`#6BB2F0`) |
+| **Panic** | ≥ 85% | 48 pt/s | Rapid frantic scurry, alert reddish body tint (`#DC4D38`), and trailing motion blur streaks |
+
+#### Direct Touch Interaction
+- **Touch & Drag**: Tap and drag Clawd anywhere along the Touch Bar track.
+- **Flick & Throw Physics**: Fling Clawd with your finger; he slides with realistic velocity, friction decay (`0.92` damping), and bounces off boundaries.
+- **Boundary Intelligence**: Clawd automatically detects the start position of the quota gauges and turns around smoothly without colliding into the progress bars.
+
+---
+
+### Live Quota Gauges & Dynamic Coloring
+
+On the right side of the Touch Bar, ClaudeBar renders live quota gauges for your selected providers:
+
+1. **Authentic Rounded Provider Logos**: Renders official provider icons (14×14 pt with 3 pt rounded corners) loaded from `~/.claudebar/icons/<provider>.png`, the application asset catalog, or SF Symbols.
+2. **Provider & Quota Name**: Displays the provider name and model/window label (e.g. `Claude 7d`, `Gemini 7d`, `Copilot`).
+3. **Reset Countdown Note**: Monospaced countdown timer indicating when the current quota window resets (e.g. `2:15`, `35m`, `3d`).
+4. **Percentage & Critical Alarm**: Bold monospaced percentage readout. An alert indicator (`!`) triggers alongside the percentage when usage is critical (≥ 90%).
+5. **Progress Bar Track**: 7 pt sleek progress bar with 100% track reference and scale tick marks at the **50%** and **90%** thresholds.
+6. **Adaptive Color Palette**:
+   - **Healthy Blue** (`#2C88F1`): Usage < 50%
+   - **Warning Amber** (`#F2B429`): Usage 50% – 89%
+   - **Alert Red** (`#E6352E`): Usage ≥ 90%
+
+---
+
+### Multi-Model & Pool Intelligence
+
+ClaudeBar understands multi-model and pooled quota structures:
+- **Google Antigravity**: Intelligently splits the multi-model quota into distinct model pools (e.g. Claude weekly pool vs. Gemini pool), rendering distinct brand icons, labels, and individual reset countdowns.
+- **Primary & Secondary Quotas**: Follows your configuration under **Settings > Menu Bar** (e.g. Session Quota and Weekly Quota side-by-side separated by a subtle vertical divider `|`).
+
+---
+
+### One-Tap Interactions
+
+- **Open ClaudeBar**: Tap directly anywhere on the quota gauges on the Touch Bar to immediately open the ClaudeBar popover window (`claudebar://open`).
+- **Interact with Clawd**: Tap or drag the mascot to play with him while waiting for code generation or test suites.
+
+---
+
+## 2. In-App Contextual Touch Bar
+
+When the ClaudeBar popover menu or Settings window is open, ClaudeBar also provides a contextual native Touch Bar (`ClaudeBarNativeTouchBar`):
+
+- **Active Provider Badge**: Displays the currently selected AI provider and status.
+- **Provider Switcher**: Horizontal scrollable list of enabled providers; tap any provider to switch monitoring focus instantly.
+- **Refresh Action**: Quick refresh button (synchronous with `⌘R`) to re-query provider APIs.
+- **Settings Shortcut**: One-tap access to open the Preferences window.
+
+---
+
+## 3. Configuration & Settings
+
+You can toggle the persistent Touch Bar on or off at any time:
+
+1. Open **ClaudeBar Settings** (`⌘,`).
+2. Go to **General > Touch Bar**.
+3. Toggle the **Touch Bar** switch.
+
+<p align="center">
+  <img src="../screenshots/TouchBar-settings.png" alt="Touch Bar Settings" width="680"/>
+</p>
+
+When disabled:
+- The native Touch Bar modal is completely dismissed and deallocated.
+- The status export file (`~/.claudebar/status.json`) marks `"enabled": false`.
+- Any external widgets (BTT / MTMR) will automatically hide.
+
+---
+
+## 4. External Integration: BetterTouchTool & MTMR
+
+For users who want to embed ClaudeBar quotas into an existing custom Touch Bar layout in **BetterTouchTool (BTT)** or **MTMR**, ClaudeBar provides a headless background synchronization pipeline.
+
+### Status File Architecture (`status.json`)
+
+The internal `StatusExportDriver` continuously writes real-time data to:
+```bash
+~/.claudebar/status.json
+```
+
+This file is automatically updated without polling whenever:
+- Quota percentages change
+- A provider refresh completes
+- The active provider is switched in settings
+
+#### Payload Schema:
+```json
+{
+  "enabled": true,
+  "updatedAt": "2026-09-04T06:30:00Z",
+  "menuBarText": "Claude: 42%",
+  "status": "healthy",
+  "selectedProviderId": "claude",
+  "selectedProviderName": "Claude",
+  "providers": [
+    {
+      "id": "claude",
+      "name": "Claude",
+      "status": "healthy",
+      "percentUsed": 42.0,
+      "percentRemaining": 58.0,
+      "resetText": "Resets in 2h 15m"
+    }
+  ]
+}
+```
+
+---
+
+### Method A: BetterTouchTool Setup
+
+BetterTouchTool can run shell scripts and format the widget background color and icon dynamically.
+
+1. Open **BetterTouchTool**.
+2. Select **Touch Bar** in the top navigation bar.
+3. Select **All Apps** in the left sidebar.
+4. Click **+ (Add Widget)** and choose **"Shell Script / Task Widget"**.
+5. Configure the widget:
    - **Widget Name**: `ClaudeBar Quota`
-   - **Execute every**: `10` seconds (หรือตามต้องการ)
+   - **Execute every**: `10` seconds
    - **Script / Task**:
      ```bash
-     python3 /Users/jzd101/Documents/ClaudeBar/scripts/touchbar_status.py --btt
+     python3 /path/to/ClaudeBar/scripts/touchbar_status.py --btt
      ```
-   - **Script Output Type**: เลือก **`JSON (text, background_color, font_color)`**
-7. **ตั้งค่าเมื่อแตะที่ปุ่ม (Assign Action)**:
-   - ในช่อง **Action** ให้เลือก **"Execute Terminal Command"** หรือ **"Open URL"**
-   - URL: `claudebar://open` (เปิดเมนู ClaudeBar) หรือ `claudebar://refresh` (สั่งรีเฟรชโควต้าทันที)
+     *(Replace `/path/to/ClaudeBar` with your actual repository path)*
+   - **Script Output Type**: Select **`JSON (text, background_color, font_color)`**
+6. **Assign Action**:
+   - Set action to **"Open URL"**: `claudebar://open` (or `claudebar://refresh`)
 
 ---
 
-## วิธีที่ 2: ติดตั้งผ่าน MTMR (ฟรีและ Open Source)
+### Method B: MTMR Setup
 
-[MTMR (My TouchBar. My Rules.)](https://github.com/Toxblh/MTMR) เป็นแอพพลิเคชันฟรีแบบ Open Source สำหรับจัดการ Touch Bar ผ่านไฟล์ JSON
+[MTMR (My TouchBar. My Rules.)](https://github.com/Toxblh/MTMR) is a free, open-source Touch Bar utility configured via JSON.
 
-### ขั้นตอนการตั้งค่า:
-
-1. ติดตั้ง MTMR (ผ่าน brew: `brew install --cask mtmr`)
-2. เปิดไฟล์ตั้งค่า `~/Library/Application Support/MTMR/items.json`
-3. เพิ่มโค้ด Widget ด้านล่างลงใน Array:
+1. Install MTMR:
+   ```bash
+   brew install --cask mtmr
+   ```
+2. Open `~/Library/Application Support/MTMR/items.json`.
+3. Add the following item to the configuration array:
 
 ```json
 {
@@ -88,7 +208,7 @@ BetterTouchTool (BTT) สามารถแสดง Widget บน Touch Bar ค
   "refreshInterval": 10,
   "commandPath": "/usr/bin/python3",
   "shellArguments": [
-    "/Users/jzd101/Documents/ClaudeBar/scripts/touchbar_status.py",
+    "/path/to/ClaudeBar/scripts/touchbar_status.py",
     "--mtmr"
   ],
   "actions": [
@@ -100,41 +220,58 @@ BetterTouchTool (BTT) สามารถแสดง Widget บน Touch Bar ค
   ]
 }
 ```
+*(Replace `/path/to/ClaudeBar` with your actual repository path)*
 
-4. บันทึกไฟล์ และ Touch Bar จะอัปเดตทันที
+4. Save the file. MTMR will reload automatically.
 
 ---
 
-## คำสั่งลัด (URL Scheme)
+### CLI Helper Script (`touchbar_status.py`)
 
-ClaudeBar รองรับ URL Scheme ต่อไปนี้:
+The companion script [`scripts/touchbar_status.py`](../../scripts/touchbar_status.py) parses `~/.claudebar/status.json` for external integrations:
 
-| URL Scheme | คำอธิบาย | ตัวอย่างการเรียกใน Terminal |
+| Flag | Description |
+|---|---|
+| `--btt` | Emits BetterTouchTool-compatible JSON with `icon_path`, text, and status colors |
+| `--mtmr` | Emits formatted text with status emoji for MTMR |
+| `--text` | Emits plain concise text (useful for SwiftBar, xbar, or tmux) |
+| `--json` | Outputs raw exported JSON status payload |
+| `--refresh` | Triggers immediate quota refresh via URL scheme |
+| `--open` | Opens the ClaudeBar popup menu |
+| `--settings` | Opens ClaudeBar Settings window |
+
+#### Provider Icons for External Tools
+Transparent PNG icons for all providers are located at:
+- Repository: `scripts/icons/<provider>.png`
+- User directory: `~/.claudebar/icons/<provider>.png`
+
+---
+
+## 5. URL Schemes
+
+ClaudeBar registers the `claudebar://` URL scheme, allowing triggers from Touch Bar widgets, Raycast, Alfred, or Terminal:
+
+| URL Scheme | Action | CLI Example |
 |---|---|---|
-| `claudebar://open` | เปิดหน้าต่างเมนู ClaudeBar | `open claudebar://open` |
-| `claudebar://refresh` | สั่ง Refresh โควต้าของทุก Provider ทันที | `open claudebar://refresh` |
-| `claudebar://settings` | เปิดหน้าต่างการตั้งค่า (Settings) | `open claudebar://settings` |
+| `claudebar://open` | Toggles the ClaudeBar dropdown popover | `open claudebar://open` |
+| `claudebar://refresh` | Triggers an immediate quota refresh for all providers | `open claudebar://refresh` |
+| `claudebar://settings` | Opens the Settings window | `open claudebar://settings` |
 
 ---
 
-## การเปิด/ปิด Touch Bar Integration
+## 6. Troubleshooting
 
-คุณสามารถเปิดหรือปิดการส่งออกข้อมูล Touch Bar ได้จาก:
-- เข้าไปที่ **Settings (Cmd + ,) > General > Touch Bar**
-- หากสวิตช์ปิดอยู่:
-  - `status.json` จะระบุสถานะเป็น `disabled`
-  - สคริปต์ BetterTouchTool (`--btt`) จะซ่อน Widget ให้โปร่งแสง (ไม่เกะกะแถบ Touch Bar)
-  - สคริปต์ MTMR (`--mtmr`) จะไม่แสดงข้อความใดๆ
+### Native Touch Bar Not Appearing
+1. **Verify Settings**: Check that Touch Bar is enabled in **Settings > General > Touch Bar**.
+2. **MacBook Touch Bar Settings**:
+   - Open macOS **System Settings > Keyboard > Touch Bar Settings...**
+   - Ensure **Touch Bar shows** is set to **App Controls** or **Expanded Control Strip**.
+3. **Restart the App**: In rare cases where another app captures exclusive modal presentation, quitting and re-launching ClaudeBar restores the system-modal session.
 
----
-
-## การแก้ปัญหา (Troubleshooting)
-
-* **Touch Bar ขึ้นว่า "ClaudeBar: Offline"**:
-  - ตรวจสอบว่าเปิดแอพ ClaudeBar อยู่หรือไม่
-  - ตรวจสอบว่ามีไฟล์ `~/.claudebar/status.json` อยู่จริงหรือไม่
-* **ทดสอบรันสคริปต์ด้วยตนเอง**:
+### "ClaudeBar: Offline" in External Scripts
+- Make sure ClaudeBar is running in your menu bar.
+- Verify that `~/.claudebar/status.json` exists and is updated.
+- Run the helper script directly in Terminal to inspect the output:
   ```bash
-  python3 scripts/touchbar_status.py --btt
-  python3 scripts/touchbar_status.py --mtmr
+  python3 scripts/touchbar_status.py --text
   ```
