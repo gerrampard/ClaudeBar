@@ -171,16 +171,20 @@ public struct TouchBarProvidersScrollView: View {
     }
 
     public var body: some View {
-        HStack(spacing: 6) {
-            ForEach(monitor.enabledProviders, id: \.id) { provider in
-                TouchBarProviderItem(
-                    provider: provider,
-                    isSelected: provider.id == monitor.selectedProviderId
-                ) {
-                    monitor.selectedProviderId = provider.id
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(monitor.enabledProviders, id: \.id) { provider in
+                    TouchBarProviderItem(
+                        provider: provider,
+                        isSelected: provider.id == monitor.selectedProviderId
+                    ) {
+                        monitor.selectedProviderId = provider.id
+                    }
                 }
             }
+            .padding(.horizontal, 4)
         }
+        .frame(maxWidth: 380)
     }
 }
 

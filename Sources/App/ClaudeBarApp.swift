@@ -31,9 +31,6 @@ struct ClaudeBarApp: App {
     /// Exports quota and menu-bar status to ~/.claudebar/status.json for Touch Bar, BTT, and external scripts.
     private let statusExportDriver: StatusExportDriver
 
-    /// Drives the persistent Touch Bar Control Strip item across all macOS apps and windows.
-    private let controlStripDriver: ControlStripTouchBarDriver
-
     /// Binding required by `.menuBarExtraAccess`; also enables programmatic
     /// dropdown control if ever needed.
     @State private var isMenuPresented = false
@@ -181,11 +178,11 @@ struct ClaudeBarApp: App {
 
         NativeTouchBarDriver.shared.configure(monitor: monitor)
 
-        controlStripDriver = ControlStripTouchBarDriver(
+        PersistentTouchBarDriver.shared.configure(
             monitor: monitor,
             settings: AppSettings.shared
         )
-        controlStripDriver.start()
+        PersistentTouchBarDriver.shared.start()
 
         // Load user extensions from ~/.claudebar/extensions/
         let extensionRegistry = ExtensionRegistry(
