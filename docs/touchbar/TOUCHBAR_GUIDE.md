@@ -1,29 +1,32 @@
-# การแสดงผล ClaudeBar บน Touch Bar (MacBook Pro M1)
+# ClaudeBar Touch Bar Integration Guide (MacBook Pro)
 
-คู่มือนี้แนะนำวิธีการนำข้อมูลโควต้าจาก ClaudeBar มาแสดงผลบนแถบ Touch Bar ของ MacBook Pro 13" (M1 / M2) แบบค้างไว้ตลอดเวลา โดยใช้ **BetterTouchTool (BTT)** หรือ **MTMR**
+This guide explains how to display persistent quota information from ClaudeBar on your MacBook Pro Touch Bar using **BetterTouchTool (BTT)** or **MTMR**.
 
----
-
-## สารบัญ
-1. [การทำงาน](#การทำงาน)
-2. [วิธีที่ 1: ติดตั้งผ่าน BetterTouchTool (แนะนำ)](#วิธีที่-1-ติดตั้งผ่าน-bettertouchtool-แนะนำ)
-3. [วิธีที่ 2: ติดตั้งผ่าน MTMR (ฟรีและ Open Source)](#วิธีที่-2-ติดตั้งผ่าน-mtmr-ฟรีและ-open-source)
-4. [คำสั่งลัด (URL Scheme)](#คำสั่งลัด-url-scheme)
-5. [การแก้ปัญหา (Troubleshooting)](#การแก้ปัญหา-troubleshooting)
+> **Note:** ClaudeBar also includes built-in native Touch Bar support that requires no third-party tools. This guide is for users who prefer customizing their Touch Bar setup using BetterTouchTool or MTMR via the exported status file.
 
 ---
 
-## การทำงาน
+## Table of Contents
+1. [How It Works](#how-it-works)
+2. [Method 1: Setup via BetterTouchTool (Recommended)](#method-1-setup-via-bettertouchtool-recommended)
+3. [Method 2: Setup via MTMR (Free & Open Source)](#method-2-setup-via-mtmr-free--open-source)
+4. [URL Schemes](#url-schemes)
+5. [Enabling / Disabling Touch Bar Integration](#enabling--disabling-touch-bar-integration)
+6. [Troubleshooting](#troubleshooting)
 
-ClaudeBar จะทำการ sync ข้อมูลโควต้าล่าสุดลงในไฟล์ `~/.claudebar/status.json` โดยอัตโนมัติทุกครั้งที่:
-- สถานะโควต้าเปลี่ยน
-- มีการรีเฟรชโควต้า
-- มีการสลับ Provider
+---
 
-สคริปต์ [scripts/touchbar_status.py](file:///Users/jzd101/Documents/ClaudeBar/scripts/touchbar_status.py) จะอ่านไฟล์นี้และแปลงผลเป็นสี, รูปไอคอนจริงของ Provider และข้อความสำหรับ Touch Bar โดยใช้ CPU และแบตเตอรี่แทบจะเป็น 0
+## How It Works
 
-### รูปไอคอนจริงของ Provider (Real Provider Icons)
-รูปภาพไอคอนจริงของแต่ละ Provider (PNG แบบ Transparent) ถูกรวบรวมไว้ที่ `scripts/icons/` และ `~/.claudebar/icons/` ครบทุกค่าย:
+ClaudeBar automatically syncs the latest quota data to `~/.claudebar/status.json` whenever:
+- Quota status changes
+- A quota refresh is triggered
+- The active provider is switched
+
+The helper script [`scripts/touchbar_status.py`](../../scripts/touchbar_status.py) reads this file and formats the output with status colors, real provider icons, and display text for the Touch Bar with virtually zero CPU and battery impact.
+
+### Real Provider Icons
+Transparent PNG icons for each supported provider are included in `scripts/icons/` and `~/.claudebar/icons/`:
 - **Claude** (Anthropic)
 - **OpenAI / Codex**
 - **Google Gemini**
@@ -40,44 +43,45 @@ ClaudeBar จะทำการ sync ข้อมูลโควต้าล่�
 - **Z.ai**
 - **Vercel**, **AmpCode**, **OpenCode**, **Oh My Pi**, **Kiro**
 
-เมื่อรันด้วยคำสั่ง `--btt` สคริปต์จะส่ง `icon_path` ชี้ไปยังไฟล์รูปจริงของ Provider นั้นๆ ให้ BetterTouchTool นำไปเรนเดอร์บน Touch Bar ทันที
+When executed with `--btt`, the script provides an `icon_path` pointing to the provider's PNG icon file, allowing BetterTouchTool to render it directly on the Touch Bar.
 
 ---
 
-## วิธีที่ 1: ติดตั้งผ่าน BetterTouchTool (แนะนำ)
+## Method 1: Setup via BetterTouchTool (Recommended)
 
-BetterTouchTool (BTT) สามารถแสดง Widget บน Touch Bar ค้างไว้ตลอดเวลา พร้อมเปลี่ยนสีพื้นหลังตามสถานะ (เขียว/ส้ม/แดง)
+BetterTouchTool (BTT) can display a persistent widget on the Touch Bar with dynamic background color based on status (green / amber / red).
 
-### ขั้นตอนการตั้งค่า:
+### Configuration Steps:
 
-1. เปิดแอพ **BetterTouchTool**
-2. เลือกแท็บ **Touch Bar** ที่เมนูด้านบน
-3. เลือก **All Apps** ในคอลัมน์ซ้ายสุด (เพื่อให้แสดงผลในทุกโปรแกรม)
-4. กดปุ่ม **+ (Add Widget)** ที่แถบด้านล่าง
-5. ค้นหาและเลือก **"Shell Script / Task Widget"**
-6. ตั้งค่า Widget ดังนี้:
+1. Open **BetterTouchTool**.
+2. Select the **Touch Bar** tab in the top navigation.
+3. Select **All Apps** in the left column (to show across all applications).
+4. Click the **+ (Add Widget)** button in the bottom bar.
+5. Search for and select **"Shell Script / Task Widget"**.
+6. Configure the widget settings:
    - **Widget Name**: `ClaudeBar Quota`
-   - **Execute every**: `10` seconds (หรือตามต้องการ)
+   - **Execute every**: `10` seconds (or your preferred interval)
    - **Script / Task**:
      ```bash
-     python3 /Users/jzd101/Documents/ClaudeBar/scripts/touchbar_status.py --btt
+     python3 /path/to/ClaudeBar/scripts/touchbar_status.py --btt
      ```
-   - **Script Output Type**: เลือก **`JSON (text, background_color, font_color)`**
-7. **ตั้งค่าเมื่อแตะที่ปุ่ม (Assign Action)**:
-   - ในช่อง **Action** ให้เลือก **"Execute Terminal Command"** หรือ **"Open URL"**
-   - URL: `claudebar://open` (เปิดเมนู ClaudeBar) หรือ `claudebar://refresh` (สั่งรีเฟรชโควต้าทันที)
+     *(Replace `/path/to/ClaudeBar` with the absolute path to your cloned repository)*
+   - **Script Output Type**: Select **`JSON (text, background_color, font_color)`**
+7. **Assign Tap Action**:
+   - In the **Action** section, select **"Execute Terminal Command"** or **"Open URL"**.
+   - URL: `claudebar://open` (opens the ClaudeBar menu) or `claudebar://refresh` (triggers an immediate quota refresh).
 
 ---
 
-## วิธีที่ 2: ติดตั้งผ่าน MTMR (ฟรีและ Open Source)
+## Method 2: Setup via MTMR (Free & Open Source)
 
-[MTMR (My TouchBar. My Rules.)](https://github.com/Toxblh/MTMR) เป็นแอพพลิเคชันฟรีแบบ Open Source สำหรับจัดการ Touch Bar ผ่านไฟล์ JSON
+[MTMR (My TouchBar. My Rules.)](https://github.com/Toxblh/MTMR) is a free, open-source application for customizing the Touch Bar via a JSON configuration file.
 
-### ขั้นตอนการตั้งค่า:
+### Configuration Steps:
 
-1. ติดตั้ง MTMR (ผ่าน brew: `brew install --cask mtmr`)
-2. เปิดไฟล์ตั้งค่า `~/Library/Application Support/MTMR/items.json`
-3. เพิ่มโค้ด Widget ด้านล่างลงใน Array:
+1. Install MTMR (via Homebrew: `brew install --cask mtmr`).
+2. Open the configuration file `~/Library/Application Support/MTMR/items.json`.
+3. Add the following widget configuration to the items array:
 
 ```json
 {
@@ -88,7 +92,7 @@ BetterTouchTool (BTT) สามารถแสดง Widget บน Touch Bar ค
   "refreshInterval": 10,
   "commandPath": "/usr/bin/python3",
   "shellArguments": [
-    "/Users/jzd101/Documents/ClaudeBar/scripts/touchbar_status.py",
+    "/path/to/ClaudeBar/scripts/touchbar_status.py",
     "--mtmr"
   ],
   "actions": [
@@ -100,40 +104,41 @@ BetterTouchTool (BTT) สามารถแสดง Widget บน Touch Bar ค
   ]
 }
 ```
+*(Replace `/path/to/ClaudeBar` with the absolute path to your cloned repository)*
 
-4. บันทึกไฟล์ และ Touch Bar จะอัปเดตทันที
+4. Save the file. The Touch Bar will update immediately.
 
 ---
 
-## คำสั่งลัด (URL Scheme)
+## URL Schemes
 
-ClaudeBar รองรับ URL Scheme ต่อไปนี้:
+ClaudeBar supports the following URL schemes:
 
-| URL Scheme | คำอธิบาย | ตัวอย่างการเรียกใน Terminal |
+| URL Scheme | Description | Terminal Example |
 |---|---|---|
-| `claudebar://open` | เปิดหน้าต่างเมนู ClaudeBar | `open claudebar://open` |
-| `claudebar://refresh` | สั่ง Refresh โควต้าของทุก Provider ทันที | `open claudebar://refresh` |
-| `claudebar://settings` | เปิดหน้าต่างการตั้งค่า (Settings) | `open claudebar://settings` |
+| `claudebar://open` | Opens the ClaudeBar dropdown menu | `open claudebar://open` |
+| `claudebar://refresh` | Triggers an immediate quota refresh for all providers | `open claudebar://refresh` |
+| `claudebar://settings` | Opens the Settings window | `open claudebar://settings` |
 
 ---
 
-## การเปิด/ปิด Touch Bar Integration
+## Enabling / Disabling Touch Bar Integration
 
-คุณสามารถเปิดหรือปิดการส่งออกข้อมูล Touch Bar ได้จาก:
-- เข้าไปที่ **Settings (Cmd + ,) > General > Touch Bar**
-- หากสวิตช์ปิดอยู่:
-  - `status.json` จะระบุสถานะเป็น `disabled`
-  - สคริปต์ BetterTouchTool (`--btt`) จะซ่อน Widget ให้โปร่งแสง (ไม่เกะกะแถบ Touch Bar)
-  - สคริปต์ MTMR (`--mtmr`) จะไม่แสดงข้อความใดๆ
+You can toggle Touch Bar data export in ClaudeBar:
+- Go to **Settings (⌘,) > General > Touch Bar**.
+- When disabled:
+  - `status.json` will report state as `disabled`.
+  - The BetterTouchTool script (`--btt`) will hide the widget transparently (leaving the Touch Bar clean).
+  - The MTMR script (`--mtmr`) will output empty text.
 
 ---
 
-## การแก้ปัญหา (Troubleshooting)
+## Troubleshooting
 
-* **Touch Bar ขึ้นว่า "ClaudeBar: Offline"**:
-  - ตรวจสอบว่าเปิดแอพ ClaudeBar อยู่หรือไม่
-  - ตรวจสอบว่ามีไฟล์ `~/.claudebar/status.json` อยู่จริงหรือไม่
-* **ทดสอบรันสคริปต์ด้วยตนเอง**:
+- **Touch Bar displays "ClaudeBar: Offline"**:
+  - Check whether the ClaudeBar application is running.
+  - Verify that `~/.claudebar/status.json` exists.
+- **Test the script manually**:
   ```bash
   python3 scripts/touchbar_status.py --btt
   python3 scripts/touchbar_status.py --mtmr
