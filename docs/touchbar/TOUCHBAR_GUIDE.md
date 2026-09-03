@@ -113,6 +113,18 @@ ClaudeBar รองรับ URL Scheme ต่อไปนี้:
 |---|---|---|
 | `claudebar://open` | เปิดหน้าต่างเมนู ClaudeBar | `open claudebar://open` |
 | `claudebar://refresh` | สั่ง Refresh โควต้าของทุก Provider ทันที | `open claudebar://refresh` |
+| `claudebar://settings` | เปิดหน้าต่างการตั้งค่า (Settings) | `open claudebar://settings` |
+
+---
+
+## การเปิด/ปิด Touch Bar Integration
+
+คุณสามารถเปิดหรือปิดการส่งออกข้อมูล Touch Bar ได้จาก:
+- เข้าไปที่ **Settings (Cmd + ,) > General > Touch Bar**
+- หากสวิตช์ปิดอยู่:
+  - `status.json` จะระบุสถานะเป็น `disabled`
+  - สคริปต์ BetterTouchTool (`--btt`) จะซ่อน Widget ให้โปร่งแสง (ไม่เกะกะแถบ Touch Bar)
+  - สคริปต์ MTMR (`--mtmr`) จะไม่แสดงข้อความใดๆ
 
 ---
 

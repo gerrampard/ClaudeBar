@@ -37,6 +37,7 @@ public final class StatusExportDriver {
             }
         }
 
+        public let enabled: Bool
         public var updatedAt: String
         public let menuBarText: String
         public let status: String
@@ -45,6 +46,7 @@ public final class StatusExportDriver {
         public let providers: [ProviderSummary]
 
         public init(
+            enabled: Bool = true,
             updatedAt: String,
             menuBarText: String,
             status: String,
@@ -52,6 +54,7 @@ public final class StatusExportDriver {
             selectedProviderName: String?,
             providers: [ProviderSummary]
         ) {
+            self.enabled = enabled
             self.updatedAt = updatedAt
             self.menuBarText = menuBarText
             self.status = status
@@ -61,6 +64,7 @@ public final class StatusExportDriver {
         }
 
         public static func == (lhs: ExportPayload, rhs: ExportPayload) -> Bool {
+            lhs.enabled == rhs.enabled &&
             lhs.menuBarText == rhs.menuBarText &&
             lhs.status == rhs.status &&
             lhs.selectedProviderId == rhs.selectedProviderId &&
@@ -107,6 +111,18 @@ public final class StatusExportDriver {
     }
 
     private func buildPayload() -> ExportPayload {
+        guard settings.touchBarEnabled else {
+            return ExportPayload(
+                enabled: false,
+                updatedAt: "",
+                menuBarText: "",
+                status: "disabled",
+                selectedProviderId: "",
+                selectedProviderName: nil,
+                providers: []
+            )
+        }
+
         let label = monitor.menuBarLabel(
             providerId: settings.menuBarPercentageProviderId,
             primaryQuotaKey: settings.menuBarPercentageQuotaKey,
@@ -144,6 +160,7 @@ public final class StatusExportDriver {
         }
 
         return ExportPayload(
+            enabled: true,
             updatedAt: "",
             menuBarText: label?.text ?? selected?.name ?? "ClaudeBar",
             status: statusString,

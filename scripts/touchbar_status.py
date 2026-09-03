@@ -11,6 +11,7 @@ Usage:
     python3 scripts/touchbar_status.py --json      # Raw status JSON
     python3 scripts/touchbar_status.py --refresh   # Trigger ClaudeBar refresh
     python3 scripts/touchbar_status.py --open      # Open ClaudeBar dropdown
+    python3 scripts/touchbar_status.py --settings  # Open ClaudeBar Settings
 """
 
 import sys
@@ -110,6 +111,14 @@ def format_btt(data):
             payload["text"] = "🤖 ClaudeBar: Offline"
         return json.dumps(payload, ensure_ascii=False)
 
+    if not data.get("enabled", True):
+        # Disabled in ClaudeBar Settings: hide the widget
+        return json.dumps({
+            "text": "",
+            "background_color": "0,0,0,0",
+            "font_color": "0,0,0,0"
+        })
+
     status = data.get("status", "unknown").lower()
     menu_text = data.get("menuBarText", "").strip()
     provider_id = data.get("selectedProviderId", "")
@@ -154,6 +163,9 @@ def format_mtmr(data):
     if not data:
         return "⚪ ClaudeBar: Offline"
 
+    if not data.get("enabled", True):
+        return ""
+
     status = data.get("status", "unknown").lower()
     menu_text = data.get("menuBarText", "").strip()
     provider_id = data.get("selectedProviderId", "")
@@ -186,11 +198,17 @@ def trigger_url(scheme_url):
 def main():
     arg = sys.argv[1] if len(sys.argv) > 1 else "--btt"
 
-    if arg == "--refresh":
+    if arg in ("-h", "--help"):
+        print(__doc__.strip())
+        return
+    elif arg == "--refresh":
         trigger_url("claudebar://refresh")
         return
     elif arg == "--open":
         trigger_url("claudebar://open")
+        return
+    elif arg == "--settings":
+        trigger_url("claudebar://settings")
         return
 
     data = load_status()

@@ -53,6 +53,15 @@ struct GeneralPane: View {
                 ) {
                     SettingsSwitch(isOn: $settings.notchEnabled)
                 }
+
+                SettingsRowDivider()
+
+                SettingsRow(
+                    title: "Touch Bar",
+                    subtitle: "Show quota and status on the Touch Bar (via BetterTouchTool / MTMR)."
+                ) {
+                    SettingsSwitch(isOn: $settings.touchBarEnabled)
+                }
             }
 
             SettingsCard {

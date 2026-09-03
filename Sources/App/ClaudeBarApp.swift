@@ -35,6 +35,8 @@ struct ClaudeBarApp: App {
     /// dropdown control if ever needed.
     @State private var isMenuPresented = false
 
+    @Environment(\.openWindow) private var openWindow
+
     /// The hook HTTP server that receives events from Claude Code
     private let hookServer = HookHTTPServer()
 
@@ -280,6 +282,9 @@ struct ClaudeBarApp: App {
             }
         case "open":
             isMenuPresented = true
+        case "settings":
+            openWindow(id: "settings")
+            NSApp.activate(ignoringOtherApps: true)
         default:
             AppLog.ui.info("Received unhandled URL: \(url.absoluteString)")
         }
