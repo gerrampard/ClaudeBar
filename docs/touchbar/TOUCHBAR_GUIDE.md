@@ -66,12 +66,12 @@ Clawd's eyes change shape based on mood — each state uses a distinct pixel pat
 - **Panic**: Two-pixel wide eyes set further apart
 - **Sleeping (100% Quota / Depleted)**: Flat horizontal closed bars `—— ——`
 
-#### Provider Body Color Tint
-Clawd's body shifts color subtly (30% brand tint blended with 70% base terracotta) to reflect which AI provider is currently active. When Clawd enters the **Sleeping** state at 100% quota, this blended provider color is gently dimmed (82% brightness) to convey rest while preserving provider identity:
+#### Provider Body Color
+Clawd's body shifts color (100% provider brand color) to reflect which AI provider is currently active. When Clawd enters the **Sleeping** state at 100% quota, this provider color is gently dimmed (82% brightness) to convey rest while preserving provider identity:
 
-| Provider | Tint |
+| Provider | Color |
 |---|---|
-| Claude | Base terracotta (no tint) |
+| Claude | Base terracotta |
 | Gemini | Golden amber |
 | Copilot | Indigo blue |
 | Antigravity | Violet |
@@ -124,15 +124,6 @@ All floating effects share a unified particle engine — each particle has indep
 - **Touch & Drag**: Tap and grab Clawd to drag him anywhere along the Touch Bar.
 - **Flick & Throw Physics**: Fling Clawd with your finger; he slides with realistic velocity, friction decay (`0.92` damping), and elastic bounces off boundaries.
 - **Boundary Intelligence**: Clawd automatically detects the start position of the quota gauges and turns around smoothly without colliding into the progress bars.
-
-#### Keyboard Activity Wakeup
-
-Clawd also wakes up when you type on the keyboard — even in other applications:
-
-- **Global keystroke detection**: ClaudeBar installs a system-wide, **listen-only** `CGEventTap` that fires on every `keyDown` event. Keystrokes are never intercepted, blocked, or delayed.
-- **Idle timer reset**: Each keystroke resets the 15 s / 30 s idle timer, so Clawd stays awake and walking for as long as you are actively typing.
-- **Stop typing → sleep**: Once you stop typing (and stop interacting with the Touch Bar) for 15 s Clawd sits down, and after 30 s he falls asleep with `zzz` bubbles.
-- **Requires Accessibility Permission**: macOS requires explicit user consent for apps to receive global keyboard events. On first launch after enabling this feature, ClaudeBar will display the standard system prompt. You can manage this in **System Settings > Privacy & Security > Accessibility**. If permission is not granted, Clawd still wakes on Touch Bar touches as before — nothing breaks.
 
 ---
 
@@ -346,13 +337,3 @@ ClaudeBar registers the `claudebar://` URL scheme, allowing triggers from Touch 
   ```bash
   python3 scripts/touchbar_status.py --text
   ```
-
-### Clawd Does Not Wake Up When Typing
-
-The keyboard wakeup feature uses a system-wide `CGEventTap` which requires **Accessibility permission**:
-
-1. Open **System Settings > Privacy & Security > Accessibility**.
-2. Find **ClaudeBar** in the list and toggle it **on**.
-3. Restart ClaudeBar.
-
-If ClaudeBar is not listed, launch it first — it will automatically request permission on startup via the standard macOS system dialog. If you click **Deny**, Clawd will fall asleep when idle as before, but will no longer wake from keyboard activity. Touch Bar touches still work regardless of this permission.

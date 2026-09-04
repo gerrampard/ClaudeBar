@@ -130,12 +130,6 @@ public final class ClaudePetTouchBarView: NSView {
         didSet { needsDisplay = true }
     }
 
-    /// Called by PersistentTouchBarDriver when global keyboard activity is detected.
-    /// Resets the idle timer so Clawd stays awake while the user is typing.
-    public func notifyKeyboardActivity() {
-        markActivity()
-    }
-
     // MARK: - Gauges + Icons
 
     public var gauges: [TouchBarProviderGauge] = [] {
@@ -465,7 +459,7 @@ public final class ClaudePetTouchBarView: NSView {
         let isSitting  = false
         let isSleeping = mood == .sleeping
 
-        // Body color: white flash on status upgrade, else provider-tinted terracotta
+        // Body color: white flash on status upgrade, else 100% provider brand color
         let bodyColor: NSColor
         if flashWhiteT > 0 {
             bodyColor = NSColor(white: 1.0, alpha: 0.95)
@@ -618,14 +612,16 @@ public final class ClaudePetTouchBarView: NSView {
         }
     }
 
-    // MARK: - Provider Body Color Tint
+    // MARK: - Provider Body Color
 
-    /// Clawd's body color: base terracotta blended 70/30 with the active provider's brand tint.
+    /// Clawd's body color: 100% active provider brand color (or default terracotta for Claude).
     private func providerBodyColor(for providerId: String, mood: Mood) -> NSColor {
         let base = NSColor(srgbRed: 0.804, green: 0.498, blue: 0.416, alpha: 1.0)
 
         let tint: NSColor?
         switch providerId.lowercased() {
+        case "claude":
+            tint = base
         case "gemini":
             tint = NSColor(srgbRed: 0.91, green: 0.72, blue: 0.27, alpha: 1.0)  // golden
         case "copilot":
@@ -661,34 +657,22 @@ public final class ClaudePetTouchBarView: NSView {
         case "alibaba":
             tint = NSColor(srgbRed: 1.00, green: 0.60, blue: 0.00, alpha: 1.0)  // orange
         default:
-            tint = nil   // Claude = default terracotta (no tint)
+            tint = nil   // Claude / unknown = default terracotta
         }
 
-        let blend: NSColor
-        if let rgbTint = (tint ?? base).usingColorSpace(.sRGB), tint != nil {
-            let rgbBase = base.usingColorSpace(.sRGB) ?? base
-            // 70% base + 30% tint blend
-            blend = NSColor(
-                srgbRed: rgbBase.redComponent   * 0.70 + rgbTint.redComponent   * 0.30,
-                green:   rgbBase.greenComponent * 0.70 + rgbTint.greenComponent  * 0.30,
-                blue:    rgbBase.blueComponent  * 0.70 + rgbTint.blueComponent   * 0.30,
-                alpha: 1.0
-            )
-        } else {
-            blend = base
-        }
+        let bodyColor = tint ?? base
 
         if mood == .sleeping {
-            let rgbBlend = blend.usingColorSpace(.sRGB) ?? blend
+            let rgb = bodyColor.usingColorSpace(.sRGB) ?? bodyColor
             return NSColor(
-                srgbRed: rgbBlend.redComponent   * 0.82,
-                green:  rgbBlend.greenComponent  * 0.82,
-                blue:   rgbBlend.blueComponent   * 0.82,
-                alpha: 1.0
+                srgbRed: rgb.redComponent   * 0.82,
+                green:  rgb.greenComponent  * 0.82,
+                blue:   rgb.blueComponent   * 0.82,
+                alpha:  1.0
             )
         }
 
-        return blend
+        return bodyColor
     }
 
     // MARK: - Particle System
