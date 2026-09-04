@@ -637,7 +637,7 @@ public final class ClaudePetTouchBarView: NSView {
         case "deepseek":
             tint = NSColor(srgbRed: 0.42, green: 0.52, blue: 1.00, alpha: 1.0)  // blue
         case "grok", "vercel", "vercel-gateway":
-            tint = NSColor(white: 0.78, alpha: 1.0)                              // near-white
+            tint = NSColor(srgbRed: 0.78, green: 0.78, blue: 0.78, alpha: 1.0)  // near-white (in sRGB)
         case "cursor":
             tint = NSColor(srgbRed: 0.20, green: 0.78, blue: 0.82, alpha: 1.0)  // cyan
         case "kimi":
@@ -665,12 +665,13 @@ public final class ClaudePetTouchBarView: NSView {
         }
 
         let blend: NSColor
-        if let tint {
+        if let rgbTint = (tint ?? base).usingColorSpace(.sRGB), tint != nil {
+            let rgbBase = base.usingColorSpace(.sRGB) ?? base
             // 70% base + 30% tint blend
             blend = NSColor(
-                srgbRed: base.redComponent   * 0.70 + tint.redComponent   * 0.30,
-                green:   base.greenComponent * 0.70 + tint.greenComponent  * 0.30,
-                blue:    base.blueComponent  * 0.70 + tint.blueComponent   * 0.30,
+                srgbRed: rgbBase.redComponent   * 0.70 + rgbTint.redComponent   * 0.30,
+                green:   rgbBase.greenComponent * 0.70 + rgbTint.greenComponent  * 0.30,
+                blue:    rgbBase.blueComponent  * 0.70 + rgbTint.blueComponent   * 0.30,
                 alpha: 1.0
             )
         } else {
@@ -678,10 +679,11 @@ public final class ClaudePetTouchBarView: NSView {
         }
 
         if mood == .sleeping {
+            let rgbBlend = blend.usingColorSpace(.sRGB) ?? blend
             return NSColor(
-                srgbRed: blend.redComponent   * 0.82,
-                green:  blend.greenComponent  * 0.82,
-                blue:   blend.blueComponent   * 0.82,
+                srgbRed: rgbBlend.redComponent   * 0.82,
+                green:  rgbBlend.greenComponent  * 0.82,
+                blue:   rgbBlend.blueComponent   * 0.82,
                 alpha: 1.0
             )
         }
