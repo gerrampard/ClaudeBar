@@ -58,7 +58,7 @@ Clawd automatically reflects your highest quota consumption and the overall quot
 | **Tired** | Usage 60–84% | 8 pt/s | Terracotta + provider tint | Drooping (row lower) | Sluggish, animated blue sweat drop |
 | **Panic** | Usage ≥ 85% | 48 pt/s | Alert red tint | Wide, spread apart | Frantic scurry + trailing motion streaks |
 | **Depleted** | All quota at 0% | — | Flat grey | Flat bars `— —` | Clawd collapses and lies flat on the ground |
-| **Sleeping** | Idle > 30 s | 3 pt/s | Dimmed terracotta | Flat bars `— —` | Slow drift, `zzz` bubbles float upward |
+| **Sleeping** | *(Disabled — Clawd stays awake at all times)* | 3 pt/s | Dimmed terracotta | Flat bars `— —` | Slow drift, `zzz` bubbles float upward |
 
 #### Expression System
 Clawd's eyes change shape based on mood — each state uses a distinct pixel pattern drawn directly onto the 20×20 sprite grid:
@@ -99,10 +99,8 @@ Clawd responds instantly to state changes — not just continuous usage levels:
 | **Quota resets** (status improves) | Two `✦` sparkle particles burst from head |
 | **Provider switches** | Clawd jumps upward with a bounce arc (85 pt) and reverses direction to face the new provider |
 | **Quota refresh triggered** (Touch Bar button) | `?` orbits above Clawd's head in a small arc for 1.5 s |
-| **Idle > 15 s** | Clawd stops walking and stands still |
-| **Idle > 30 s** | Clawd enters **Sleeping** mood — eyes close, `zzz` particles drift up every 2 s |
-| **Any Touch Bar touch** | Idle timer resets; Clawd immediately wakes and resumes walking |
-| **Keyboard keystroke** (any app) | Idle timer resets; Clawd wakes and resumes walking — requires Accessibility permission |
+| **Continuous Activity** | Clawd stays awake and continuously patrols the Touch Bar (no idle sleeping) |
+| **Direct Touch** | Tap to bounce, drag to move, fling with release velocity |
 
 #### Context-Aware Behaviors
 
