@@ -86,6 +86,7 @@ public final class NativeTouchBarDriver: NSObject, NSTouchBarDelegate {
 
     @objc private func refreshAction() {
         guard let monitor else { return }
+        PersistentTouchBarDriver.shared.triggerRefreshPulse()
         Task {
             await monitor.refreshAll()
         }

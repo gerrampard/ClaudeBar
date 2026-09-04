@@ -17,6 +17,7 @@ public final class PersistentTouchBarDriver: NSObject, NSTouchBarDelegate {
     private var petView: ClaudePetTouchBarView?
     private var monitor: QuotaMonitor?
     private var settings: AppSettings?
+    private var sessionMonitor: SessionMonitor?
 
     private var sync: ObservationRenderSync<[TouchBarProviderGauge]>?
     private var isPresented = false
@@ -27,9 +28,15 @@ public final class PersistentTouchBarDriver: NSObject, NSTouchBarDelegate {
         super.init()
     }
 
-    public func configure(monitor: QuotaMonitor, settings: AppSettings) {
+    public func configure(monitor: QuotaMonitor, settings: AppSettings, sessionMonitor: SessionMonitor? = nil) {
         self.monitor = monitor
         self.settings = settings
+        self.sessionMonitor = sessionMonitor
+    }
+
+    /// Trigger the refresh-pulse animation on Clawd's head.
+    public func triggerRefreshPulse() {
+        petView?.triggerRefreshPulse()
     }
 
     public func start() {
@@ -220,6 +227,7 @@ public final class PersistentTouchBarDriver: NSObject, NSTouchBarDelegate {
 
     private func updateGauges(_ gauges: [TouchBarProviderGauge]) {
         petView?.gauges = gauges
+        petView?.sessionActive = sessionMonitor?.hasActiveSession ?? false
 
         if let settings, settings.touchBarEnabled, !gauges.isEmpty {
             presentIfNeeded()
