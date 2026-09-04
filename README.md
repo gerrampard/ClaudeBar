@@ -47,21 +47,17 @@ Some companies support ClaudeBar's open source development through [GitHub Spons
 
 ## Features
 
-- **19+ AI Providers Supported** - Monitor Claude, Codex, Gemini, GitHub Copilot, Antigravity, Cursor, AWS Bedrock, AWS Kiro, Kimi, DeepSeek, Mistral, MiniMax, Alibaba Coding Plan, Z.ai, Amp Code, OpenCode Go, Oh My Pi, Grok Build, and Vercel in one unified app.
-- **MacBook Touch Bar Integration** - Persistent system-wide Touch Bar widget featuring real-time multi-provider quota gauges, progress bars, and an interactive retro pixel mascot (**Clawd**) with mood-reactive expressions, brand color tinting, physics, and sleep behavior when quota is depleted ([learn more](#claudebar-with-touch-bar)).
-- **MacBook Notch Live Activity** - Track Claude Code sessions (subagents, phases, permissions) and quota in your physical or virtual MacBook notch ([learn more](#macbook-notch-live-activity)).
-- **Multi-Account Support** - Add and switch between multiple accounts per provider (e.g. personal, work, different teams) with independent quota monitoring.
-- **Overview Mode** - View all enabled providers at once in a single scrollable dashboard without switching tabs.
-- **Claude Code Session Tracking** - Real-time monitoring of active sessions, subagents, and permission prompts via hooks, with desktop notifications.
-- **Daily Usage & Prompt Cache Analytics** - Analyze local session logs to show daily cost, token consumption (with cache hit rate & savings), and active working time.
-- **Pace-Aware Burn Rate Warnings** - Calculates whether your consumption rate will exhaust your quota before period reset, replacing arbitrary thresholds.
-- **Flexible Quota Display** - Toggle between "Remaining" and "Used" percentage views and customize menu bar formatting.
-- **Custom Web Cards** - Embed third-party web dashboards (e.g. `claude.owo.nz`) inline under quota cards via WKWebView.
-- **User Extensions System** - Add custom providers via `~/.claudebar/extensions/` with scripts or built-in URL health checks ([learn more](docs/features/extensions.md)).
-- **External Touch Bar & Tool Integration** - Headless status export (`~/.claudebar/status.json`) for BetterTouchTool and MTMR, companion CLI script, and `claudebar://` URL schemes.
-- **Multiple Themes & Terminal Import** - Light, Dark, CLI, Christmas (with snowfall and Santa hat), and imported `.itermcolors` terminal themes.
-- **Launch at Login & Auto-Refresh** - Native macOS `SMAppService` launch at login and configurable auto-refresh intervals.
-- **Keyboard Shortcuts** - Quick access with `⌘D` (Dashboard), `⌘R` (Refresh), and `⌘,` (Settings).
+- **Multi-Provider Support** - Monitor Claude, Codex, Gemini, GitHub Copilot, Antigravity, Z.ai, Kimi, Kiro, Amp, OpenCode Go, Oh My Pi, and Grok quotas in one place
+- **Provider Enable/Disable** - Toggle individual providers on/off from Settings to customize your monitoring
+- **Real-Time Quota Tracking** - View Session, Weekly, and Model-specific usage percentages
+- **Multiple Themes** - Light, Dark, CLI, Christmas, and [imported terminal themes](#import-terminal-theme) (.itermcolors)
+- **Automatic Adaptation** - System theme follows your macOS appearance; Christmas auto-enables during the holiday season
+- **Visual Status Indicators** - Color-coded progress bars (green/yellow/red) show quota health
+- **System Notifications** - Get alerted when quota status changes to warning or critical
+- **Touch Bar Integration** - Persistent MacBook Touch Bar widget with real-time multi-provider gauges, progress bars, and an interactive pixel mascot ([learn more](#claudebar-with-touch-bar))
+- **Notify! Lock Screen Publishing** - Push quota state to your iPhone Lock Screen via [Notify!](https://getnotifyapp.com) as a Live Activity showing up to six quota windows plus a widget gauge for one chosen quota (off by default, see below)
+- **Auto-Refresh** - Automatically updates quotas at configurable intervals
+- **Keyboard Shortcuts** - Quick access with `⌘D` (Dashboard) and `⌘R` (Refresh)
 
 ## Quota Status Thresholds
 
@@ -215,6 +211,21 @@ ClaudeBar supports the `claudebar://` URL scheme for quick actions from Raycast,
 | `claudebar://open` | Toggles the ClaudeBar dropdown popover | `open claudebar://open` |
 | `claudebar://refresh` | Triggers immediate quota refresh for all providers | `open claudebar://refresh` |
 | `claudebar://settings` | Opens the ClaudeBar Settings window | `open claudebar://settings` |
+
+### Notify! Setup
+
+Publishing quota state to your iPhone Lock Screen is optional and off by default. It is configured in **Settings > Notify!**.
+
+1. Get [Notify!](https://getnotifyapp.com). It runs on Mac, on iOS, and on any device through web push.
+2. **Open it once on the iPhone or iPad you want to publish to.** A Live Activity cannot be started until that device has registered with the push service, and only opening the app does that.
+3. In Notify!, copy your device ID and device token.
+4. Put them in the **Device ID** and **Token** fields in ClaudeBar's Notify! settings pane and press **Save Link**. Pasting a whole notification URL into the Device ID field works too, ClaudeBar splits it across both. **Verify Device** confirms the pair against Notify! and names the phone it belongs to. Then turn **Publish to Notify!** on.
+
+The Live Activity needs an iPhone or iPad ID. Notify! also issues IDs for Macs and browsers, and those keep the widget gauge perfectly well, but Notify! cannot start a Live Activity on one, so ClaudeBar disables just that switch and says why. A group ID receives notifications but owns no Lock Screen of its own, so it gets neither.
+
+The Live Activity and the widget gauge can each be turned off separately, and you can choose which quota the gauge shows. Note that this sends provider names, quota window labels and remaining percentages to a third-party service. The device token is stored in the Keychain, not in `~/.claudebar/settings.json`. A build you compile yourself is ad-hoc signed and the Keychain refuses it, so on those the token falls back to ClaudeBar's app credentials and the pane says so.
+
+Full details: [docs/features/notify.md](docs/features/notify.md).
 
 ## Installation
 
