@@ -285,7 +285,7 @@ public final class ClaudePetTouchBarView: NSView {
         isNightMode = hour >= 22 || hour < 5
 
         let maxUsage = gauges.map(\.percentUsed).max() ?? 0
-        let isSleeping = idleElapsed > 30.0
+        let isSleeping = false // Clawd stays awake at all times
         let overallSt = worstStatus(from: gauges)
         let mood = Mood.from(maxUsage: maxUsage, overallStatus: overallSt, isSleeping: isSleeping)
 
@@ -355,8 +355,8 @@ public final class ClaudePetTouchBarView: NSView {
             return
         }
 
-        // Sitting / sleeping: stop walking
-        let isSitting = idleElapsed > 15.0
+        // Keep walking at all times (always awake, no idle stop)
+        let isSitting = false
         if !isSitting {
             let finalSpeed = mood.speed * sessionMult * nightMult
             x += dir * finalSpeed * CGFloat(dt)
@@ -420,7 +420,7 @@ public final class ClaudePetTouchBarView: NSView {
         dirtyRect.fill()
 
         let maxUsage = gauges.map(\.percentUsed).max() ?? 0
-        let isSleeping = idleElapsed > 30.0
+        let isSleeping = false // Clawd stays awake at all times
         let overallSt = worstStatus(from: gauges)
         let mood = Mood.from(maxUsage: maxUsage, overallStatus: overallSt, isSleeping: isSleeping)
 
@@ -453,7 +453,7 @@ public final class ClaudePetTouchBarView: NSView {
         }
 
         let isFlipped = dir < 0
-        let isSitting  = idleElapsed > 15.0
+        let isSitting  = false
         let isSleeping = mood == .sleeping
 
         // Body color: white flash on status upgrade, else provider-tinted terracotta
