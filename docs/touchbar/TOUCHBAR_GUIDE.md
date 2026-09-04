@@ -56,19 +56,18 @@ Clawd automatically reflects your highest quota consumption and the overall quot
 | **Calm** | Usage < 30% | 12 pt/s | Terracotta + provider tint | Normal dots | Relaxed stroll |
 | **Brisk** | Usage 30–59% | 24 pt/s | Terracotta + provider tint | Normal dots | Upbeat walk |
 | **Tired** | Usage 60–84% | 8 pt/s | Terracotta + provider tint | Drooping (row lower) | Sluggish, animated blue sweat drop |
-| **Panic** | Usage ≥ 85% | 48 pt/s | Alert red tint | Wide, spread apart | Frantic scurry + trailing motion streaks |
-| **Depleted** | All quota at 0% | — | Flat grey | Flat bars `— —` | Clawd collapses and lies flat on the ground |
-| **Sleeping** | *(Disabled — Clawd stays awake at all times)* | 3 pt/s | Dimmed terracotta | Flat bars `— —` | Slow drift, `zzz` bubbles float upward |
+| **Panic** | Usage 85–99% | 48 pt/s | Alert red tint | Wide, spread apart | Frantic scurry + trailing motion streaks |
+| **Sleeping** | Usage = 100% (Depleted) | 0 pt/s | Dimmed terracotta + provider tint | Flat bars `— —` | Sleeps peacefully in place, `zzz` bubbles float upward |
 
 #### Expression System
 Clawd's eyes change shape based on mood — each state uses a distinct pixel pattern drawn directly onto the 20×20 sprite grid:
 - **Calm / Brisk**: Single dot per eye (standard)
 - **Tired**: Drooping dots — shifted one row lower
 - **Panic**: Two-pixel wide eyes set further apart
-- **Depleted / Sleeping**: Flat horizontal bars `—— ——`
+- **Sleeping (100% Quota / Depleted)**: Flat horizontal closed bars `—— ——`
 
 #### Provider Body Color Tint
-Clawd's body shifts color subtly (30% brand tint blended with 70% base terracotta) to reflect which AI provider is currently active:
+Clawd's body shifts color subtly (30% brand tint blended with 70% base terracotta) to reflect which AI provider is currently active. When Clawd enters the **Sleeping** state at 100% quota, this blended provider color is gently dimmed (82% brightness) to convey rest while preserving provider identity:
 
 | Provider | Tint |
 |---|---|
@@ -96,11 +95,12 @@ Clawd responds instantly to state changes — not just continuous usage levels:
 | Event | Reaction |
 |---|---|
 | **Status degrades** (healthy→warning→critical) | Body flashes white for 0.12 s + `!` particle floats upward from head |
-| **Quota resets** (status improves) | Two `✦` sparkle particles burst from head |
+| **Quota depleted (100% used)** | Clawd stops walking and falls asleep peacefully in place; eyes close to `— —` and `z` bubbles float up |
+| **Quota resets** (status improves / drops below 100%) | Two `✦` sparkle particles burst from head and Clawd immediately wakes up |
 | **Provider switches** | Clawd jumps upward with a bounce arc (85 pt) and reverses direction to face the new provider |
 | **Quota refresh triggered** (Touch Bar button) | `?` orbits above Clawd's head in a small arc for 1.5 s |
-| **Continuous Activity** | Clawd stays awake and continuously patrols the Touch Bar (no idle sleeping) |
-| **Direct Touch** | Tap to bounce, drag to move, fling with release velocity |
+| **Active Monitoring** | Clawd stays awake and continuously patrols the Touch Bar as long as quota < 100% |
+| **Direct Touch** | Tap to bounce, drag to move, fling with release velocity (even while sleeping) |
 
 #### Context-Aware Behaviors
 
@@ -117,7 +117,7 @@ All floating effects share a unified particle engine — each particle has indep
 |---|---|---|
 | `!` | Status alert | Quota level degraded |
 | `✦` | Sparkle | Quota reset / night stars |
-| `z` | Zzz | Idle sleeping |
+| `z` | Zzz | Quota reaches 100% (Sleeping) |
 | `?` | Refresh pulse | Quota refresh in progress |
 
 #### Direct Touch Interaction
