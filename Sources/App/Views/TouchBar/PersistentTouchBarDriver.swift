@@ -23,6 +23,7 @@ public final class PersistentTouchBarDriver: NSObject, NSTouchBarDelegate {
     private var isPresented = false
     private var activateObserver: NSObjectProtocol?
     private var unlockObserver: NSObjectProtocol?
+    private var keyboardMonitor: GlobalKeyboardMonitor?
 
     public override init() {
         super.init()
@@ -60,7 +61,14 @@ public final class PersistentTouchBarDriver: NSObject, NSTouchBarDelegate {
         self.sync = newSync
         newSync.start()
 
-        // 3. Re-assert on application switch (cheap and idempotent)
+        // 3. Global keyboard monitor — keeps Clawd awake while the user is typing
+        let km = GlobalKeyboardMonitor { [weak self] in
+            self?.petView?.notifyKeyboardActivity()
+        }
+        self.keyboardMonitor = km
+        km.start()
+
+        // 4. Re-assert on application switch (cheap and idempotent)
         activateObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification,
             object: nil,
@@ -71,7 +79,7 @@ public final class PersistentTouchBarDriver: NSObject, NSTouchBarDelegate {
             }
         }
 
-        // 4. Re-assert when screen unlocks
+        // 5. Re-assert when screen unlocks
         unlockObserver = DistributedNotificationCenter.default().addObserver(
             forName: NSNotification.Name("com.apple.screenIsUnlocked"),
             object: nil,
@@ -92,6 +100,8 @@ public final class PersistentTouchBarDriver: NSObject, NSTouchBarDelegate {
         petView?.stopAnimation()
         petView = nil
         touchBar = nil
+        keyboardMonitor?.stop()
+        keyboardMonitor = nil
 
         if let activateObserver {
             NSWorkspace.shared.notificationCenter.removeObserver(activateObserver)
