@@ -129,6 +129,12 @@ public final class ClaudePetTouchBarView: NSView {
         didSet { needsDisplay = true }
     }
 
+    /// Called by PersistentTouchBarDriver when global keyboard activity is detected.
+    /// Resets the idle timer so Clawd stays awake while the user is typing.
+    public func notifyKeyboardActivity() {
+        markActivity()
+    }
+
     // MARK: - Gauges + Icons
 
     public var gauges: [TouchBarProviderGauge] = [] {
