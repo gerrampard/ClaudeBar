@@ -53,10 +53,11 @@ public final class ClaudePetTouchBarView: NSView {
     private enum Mood {
         case calm, brisk, tired, panic, depleted, sleeping
 
-        /// Derive mood from quota data and idle state.
-        static func from(maxUsage: Double, overallStatus: QuotaStatus, isSleeping: Bool) -> Mood {
-            if isSleeping { return .sleeping }
-            if overallStatus == .depleted { return .depleted }
+        /// Derive mood from quota data.
+        static func from(maxUsage: Double, overallStatus: QuotaStatus, isSleeping: Bool = false) -> Mood {
+            if isSleeping || overallStatus == .depleted || Int(maxUsage.rounded()) >= 100 || maxUsage >= 100.0 {
+                return .sleeping
+            }
             if maxUsage >= 85.0 { return .panic }
             if maxUsage >= 60.0 { return .tired }
             if maxUsage >= 30.0 { return .brisk }
@@ -70,7 +71,7 @@ public final class ClaudePetTouchBarView: NSView {
             case .tired:    return 8.0
             case .panic:    return 48.0
             case .depleted: return 0.0
-            case .sleeping: return 3.0
+            case .sleeping: return 0.0
             }
         }
     }
@@ -291,9 +292,9 @@ public final class ClaudePetTouchBarView: NSView {
         isNightMode = hour >= 22 || hour < 5
 
         let maxUsage = gauges.map(\.percentUsed).max() ?? 0
-        let isSleeping = false // Clawd stays awake at all times
         let overallSt = worstStatus(from: gauges)
-        let mood = Mood.from(maxUsage: maxUsage, overallStatus: overallSt, isSleeping: isSleeping)
+        let mood = Mood.from(maxUsage: maxUsage, overallStatus: overallSt)
+        let isSleeping = (mood == .sleeping)
 
         // Speed modifiers
         let sessionMult: CGFloat = sessionActive ? 1.5 : 1.0   // +50% when Claude Code active
@@ -332,7 +333,7 @@ public final class ClaudePetTouchBarView: NSView {
         // Zzz emission when sleeping (every 2 s)
         if isSleeping && now - lastZzzEmit > 2.0 {
             lastZzzEmit = now
-            spawnParticle(glyph: "z", x: x + 10, y: 21, vx: 0.25, vy: 0.5, size: 8)
+            spawnParticle(glyph: "z", x: x + dir * 8.0, y: 22, vx: dir * 0.2, vy: 0.5, size: 8)
         }
 
         let rightLimit = petRightBoundary
@@ -361,15 +362,18 @@ public final class ClaudePetTouchBarView: NSView {
             return
         }
 
-        // Keep walking at all times (always awake, no idle stop)
-        let isSitting = false
-        if !isSitting {
-            let finalSpeed = mood.speed * sessionMult * nightMult
-            x += dir * finalSpeed * CGFloat(dt)
-            if x > rightLimit { x = rightLimit; dir = -1 }
-            if x < pad        { x = pad;        dir =  1 }
-            phase += CGFloat(dt) * (finalSpeed / 9.0)
+        // Sleeping: stand still, no movement
+        if isSleeping {
+            needsDisplay = true
+            return
         }
+
+        // Keep walking at all times (always awake when quota < 100%)
+        let finalSpeed = mood.speed * sessionMult * nightMult
+        x += dir * finalSpeed * CGFloat(dt)
+        if x > rightLimit { x = rightLimit; dir = -1 }
+        if x < pad        { x = pad;        dir =  1 }
+        phase += CGFloat(dt) * (finalSpeed / 9.0)
 
         needsDisplay = true
     }
@@ -426,9 +430,8 @@ public final class ClaudePetTouchBarView: NSView {
         dirtyRect.fill()
 
         let maxUsage = gauges.map(\.percentUsed).max() ?? 0
-        let isSleeping = false // Clawd stays awake at all times
         let overallSt = worstStatus(from: gauges)
-        let mood = Mood.from(maxUsage: maxUsage, overallStatus: overallSt, isSleeping: isSleeping)
+        let mood = Mood.from(maxUsage: maxUsage, overallStatus: overallSt)
 
         // Ground line across the Touch Bar
         NSColor(white: 1.0, alpha: 0.14).set()
@@ -621,15 +624,7 @@ public final class ClaudePetTouchBarView: NSView {
     private func providerBodyColor(for providerId: String, mood: Mood) -> NSColor {
         let base = NSColor(srgbRed: 0.804, green: 0.498, blue: 0.416, alpha: 1.0)
 
-        if mood == .sleeping {
-            // Slightly dimmed when sleeping
-            return NSColor(srgbRed: base.redComponent   * 0.82,
-                           green:  base.greenComponent  * 0.82,
-                           blue:   base.blueComponent   * 0.82,
-                           alpha: 1.0)
-        }
-
-        let tint: NSColor
+        let tint: NSColor?
         switch providerId.lowercased() {
         case "gemini":
             tint = NSColor(srgbRed: 0.91, green: 0.72, blue: 0.27, alpha: 1.0)  // golden
@@ -666,16 +661,32 @@ public final class ClaudePetTouchBarView: NSView {
         case "alibaba":
             tint = NSColor(srgbRed: 1.00, green: 0.60, blue: 0.00, alpha: 1.0)  // orange
         default:
-            return base   // Claude = default terracotta (no tint)
+            tint = nil   // Claude = default terracotta (no tint)
         }
 
-        // 70% base + 30% tint blend
-        return NSColor(
-            srgbRed: base.redComponent   * 0.70 + tint.redComponent   * 0.30,
-            green:   base.greenComponent * 0.70 + tint.greenComponent  * 0.30,
-            blue:    base.blueComponent  * 0.70 + tint.blueComponent   * 0.30,
-            alpha: 1.0
-        )
+        let blend: NSColor
+        if let tint {
+            // 70% base + 30% tint blend
+            blend = NSColor(
+                srgbRed: base.redComponent   * 0.70 + tint.redComponent   * 0.30,
+                green:   base.greenComponent * 0.70 + tint.greenComponent  * 0.30,
+                blue:    base.blueComponent  * 0.70 + tint.blueComponent   * 0.30,
+                alpha: 1.0
+            )
+        } else {
+            blend = base
+        }
+
+        if mood == .sleeping {
+            return NSColor(
+                srgbRed: blend.redComponent   * 0.82,
+                green:  blend.greenComponent  * 0.82,
+                blue:   blend.blueComponent   * 0.82,
+                alpha: 1.0
+            )
+        }
+
+        return blend
     }
 
     // MARK: - Particle System
