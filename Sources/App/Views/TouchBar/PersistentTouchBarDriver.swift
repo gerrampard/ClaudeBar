@@ -4,7 +4,7 @@ import Infrastructure
 
 // MARK: - Persistent Touch Bar Driver
 
-/// Manages an always-on, system-wide Touch Bar interface inspired by `tpklo/claude-usage-touchbar`.
+/// Manages an always-on, system-wide Touch Bar interface.
 /// Uses macOS system modal presentation (placement 0) so it remains visible across all applications and windows.
 @MainActor
 public final class PersistentTouchBarDriver: NSObject, NSTouchBarDelegate {
@@ -18,6 +18,7 @@ public final class PersistentTouchBarDriver: NSObject, NSTouchBarDelegate {
     private var monitor: QuotaMonitor?
     private var settings: AppSettings?
     private var sessionMonitor: SessionMonitor?
+    private var keyboardMonitor: GlobalKeyboardMonitor?
 
     private var sync: ObservationRenderSync<[TouchBarProviderGauge]>?
     private var isPresented = false
@@ -82,6 +83,13 @@ public final class PersistentTouchBarDriver: NSObject, NSTouchBarDelegate {
             }
         }
 
+        // 5. Global Keyboard Monitor for typing reactivity
+        let kMon = GlobalKeyboardMonitor { [weak self] in
+            self?.petView?.recordKeystroke()
+        }
+        self.keyboardMonitor = kMon
+        kMon.start()
+
         presentIfNeeded()
     }
 
@@ -89,6 +97,8 @@ public final class PersistentTouchBarDriver: NSObject, NSTouchBarDelegate {
         dismiss()
         sync?.stop()
         sync = nil
+        keyboardMonitor?.stop()
+        keyboardMonitor = nil
         petView?.stopAnimation()
         petView = nil
         touchBar = nil

@@ -7,7 +7,7 @@ It offers two integration modes:
 2. **External Integration (Optional)**: Exported status integration via `~/.claudebar/status.json` for users who prefer configuring widgets in **BetterTouchTool (BTT)** or **MTMR**.
 
 <p align="center">
-  <img src="../screenshots/TouchBar-preview.png" alt="ClaudeBar Touch Bar Preview" width="100%"/>
+  <img src="../screenshots/TouchBar-preview.gif" alt="ClaudeBar Touch Bar Preview" width="100%"/>
 </p>
 
 ---
@@ -177,9 +177,6 @@ You can toggle the persistent Touch Bar on or off at any time:
 2. Go to **General > Touch Bar**.
 3. Toggle the **Touch Bar** switch.
 
-<p align="center">
-  <img src="../screenshots/TouchBar-settings.png" alt="Touch Bar Settings" width="680"/>
-</p>
 
 When disabled:
 - The native Touch Bar modal is completely dismissed and deallocated.

@@ -8,7 +8,9 @@
 [![Platform](https://img.shields.io/badge/Platform-macOS%2015-blue.svg)](https://developer.apple.com)
 [![Homebrew](https://img.shields.io/badge/Homebrew-Install-brightgreen.svg)](https://formulae.brew.sh/cask/claudebar)
 
-A macOS menu bar application that monitors AI coding assistant usage quotas. Keep track of your Claude, Codex, Gemini, GitHub Copilot, Antigravity, Z.ai, Kimi, Kiro, Amp, OpenCode Go, Oh My Pi, Grok, and more at a glance.
+A macOS menu bar application that monitors AI coding assistant usage quotas in real time. Keep track of your Claude, OpenAI Codex, Google Gemini, GitHub Copilot, Google Antigravity, Cursor, AWS Bedrock, AWS Kiro, Kimi, DeepSeek, Mistral, MiniMax, Alibaba Coding Plan, Z.ai, Amp Code, OpenCode Go, Oh My Pi, Grok Build, and Vercel at a glance.
+
+Featuring full **MacBook Touch Bar integration** with persistent multi-provider gauges and an interactive pixel mascot (**Clawd**), **MacBook Notch Live Activity**, **Multi-Account Switching**, and Raycast-style **User Extensions**.
 
 <table align="center">
   <tr>
@@ -52,95 +54,178 @@ Some companies support ClaudeBar's open source development through [GitHub Spons
 - **Automatic Adaptation** - System theme follows your macOS appearance; Christmas auto-enables during the holiday season
 - **Visual Status Indicators** - Color-coded progress bars (green/yellow/red) show quota health
 - **System Notifications** - Get alerted when quota status changes to warning or critical
-- **Touch Bar Integration** - Persistent MacBook Touch Bar widget with real-time multi-provider gauges, progress bars, and an interactive pixel mascot ([learn more](#claudebar-with-touch-bar))
+- **Touch Bar Integration** - Persistent MacBook Touch Bar widget with real-time multi-provider gauges, progress bars, and an interactive pixel mascot ([learn more](#touch-bar-integration))
 - **Notify! iPhone Publishing** - Push quota state to your iPhone via [Notify!](https://getnotifyapp.com) on three surfaces: a Lock Screen Live Activity showing up to six quota windows, a Home Screen widget carrying that same content but staying put, and a Lock Screen widget gauge for one chosen quota (off by default, see below)
 - **Auto-Refresh** - Automatically updates quotas at configurable intervals
 - **Keyboard Shortcuts** - Quick access with `⌘D` (Dashboard) and `⌘R` (Refresh)
 
 ## Quota Status Thresholds
 
-| Remaining | Status | Color |
-|-----------|--------|-------|
-| > 50% | Healthy | Green |
-| 20-50% | Warning | Yellow |
-| < 20% | Critical | Red |
-| 0% | Depleted | Gray |
+| Remaining | Status | Color | Description |
+|-----------|--------|-------|-------------|
+| > 50% | Healthy | Blue / Green | Ample quota available |
+| 20-50% | Warning | Yellow / Amber | Approaching usage threshold or accelerated burn rate |
+| < 20% | Critical | Red | Low quota remaining; alerts triggered |
+| 0% | Depleted | Gray | Quota exhausted; Clawd mascot enters sleep mode |
 
-## ClaudeBar with Touch Bar
+> [!TIP]
+> You can also enable **Burn Rate Warnings** in **Settings > General** to trigger alerts based on your real-time consumption velocity against remaining time rather than fixed percentage cutoffs.
 
-ClaudeBar features native, system-wide Touch Bar integration for MacBook Pro models equipped with a Touch Bar (including M1/M2 and Intel). Inspired by the beloved [`tpklo/claude-usage-touchbar`](https://github.com/tpklo/claude-usage-touchbar), this runs 100% natively inside ClaudeBar—requiring **no third-party apps** (no BetterTouchTool or MTMR required).
+## Touch Bar Integration
+
+ClaudeBar features native, system-wide Touch Bar integration for MacBook Pro models equipped with an Apple Touch Bar (including M1/M2 and Intel). This runs 100% natively inside ClaudeBar—requiring **zero third-party apps** (no BetterTouchTool or MTMR required).
 
 <p align="center">
-  <img src="docs/screenshots/TouchBar-preview.png" alt="ClaudeBar with Touch Bar" width="100%"/>
+  <img src="docs/screenshots/TouchBar-preview.gif" alt="ClaudeBar Touch Bar Preview" width="100%"/>
 </p>
 
 ### Key Touch Bar Features
 
-- **Always Visible Across All Windows & Apps**: Uses macOS system-modal function bar presentation (`placement: 0`). The widget remains persistently visible on your Touch Bar regardless of which application is active, automatically re-asserting on app switching and system unlock while keeping your system Escape key and Control Strip media/volume controls intact.
+- **Always Visible System-Wide (`placement: 0`)**: Uses macOS system-modal function bar presentation. The widget remains persistently visible across all full-screen windows and apps, automatically re-asserting on app switching and system unlock while keeping your system Escape key and Control Strip media/volume controls intact.
 - **Interactive Pixel Mascot (Clawd)**:
-  - An animated 20×20 retro creature pacing along a subtle ground line.
-  - **Mood-Reactive Gauge**: The creature's speed and animation adapt to your highest quota usage:
-    - **Calm** (< 30%): A relaxed, peaceful stroll.
-    - **Brisk** (30%–59%): Picking up the pace as coding intensifies.
-    - **Tired** (60%–84%): Moving sluggishly with animated sweat drops.
-    - **Panic** (≥ 85%): Frantic scurrying with speed streaks trailing behind!
-  - **Direct Touch Interaction**: Touch and drag Clawd across the Touch Bar, or flick him with realistic velocity and friction decay.
+  - An animated 20×20 retro creature pacing along an illuminated ground line.
+  - **Autonomous Antics System**: Spontaneous antics and tricks occur as Clawd patrols:
+    - **The Zoomies**: High-speed sprint at 95 pt/s with trailing smoke streaks, finishing with a quick panting rest.
+    - **Skateboard Shredder**: Drops a mini skateboard underfoot and zips across the Touch Bar at 55 pt/s with spark particles.
+    - **Smooth Moonwalk**: Glides backward while facing forward with sparkling footsteps (`✦`).
+    - **Trip & Roll**: Hilariously stumbles and face-plants with X-eyes, then scrambles up sheepishly with an `!` particle.
+    - **Acrobatics & Stunts**: High-arc backflips, upside-down headspin breakdancing with star bursts, and wave-like worm crawls.
+    - **Playful Props**: Floats with a red balloon until it pops (`*POP*`), casts a fishing line for diamonds/tokens (`🪙`/`💎`), chases and munches fluttering pixel bugs (`🐛`/`🐝`), sweeps the floor with a broom, downs an espresso cup (`☕`) for an energy sprint, or drops down for push-ups (`💪`).
+  - **Thought Bubble & Kaomoji System**:
+    - Adaptive thought bubbles float beside Clawd at eye level (intelligently switching left or right based on walking direction and boundary clearance).
+    - Randomly expresses thoughts with expressive Kaomojis: `(ง'̀-'́)ง`, `(ಠ_ಠ)`, `(⊙_⊙)`, `( ^ω^ )`, `(>_<)`, `(╯°□°)╯`, `(^o^)/` and cute icons: `☕`, `💡`, `♥`, `♪`, `🔥`, `🚀`, `💬`, `⚡`.
+    - Periodically drops collectible gifts on the ground line: `🎁`, `🍕`, `💎`, `⭐`, `🪙`.
+  - **Ultra Panic Mode (Quota ≥ 95%)**:
+    - Full-body micro-jitter screen shake, screaming open mouth with alternating wide eyes, and rapid sputtering steam (`♨`) and flame (`!`) particles.
+  - **Confetti Celebration**:
+    - Multi-colored confetti explosion (`🎉 YAY!`) bursts across the bar whenever your quota resets or improves.
+  - **RGB Gamer Mode Easter Egg**:
+    - Periodic 3.5-second rainbow hue-cycling easter egg across Clawd's entire body.
+  - **Direct Touch Interaction & Physics**:
+    - **Laser Pointer Chase**: Tap anywhere on empty space on the Touch Bar to cast a glowing red laser dot (`🔴`); Clawd turns around and excitedly sprints to catch it!
+    - **Tickle Mode**: Tap and hold Clawd to make him giggle with smiling eyes (`^ ^`) and floating hearts (`♥`).
+    - **High-Five**: When Clawd raises his hand waiting (`✋ Tap!`), tap his hand to trigger a `✦ BAM! ✦` celebration!
+    - **Belly Rub**: Flips onto back wiggling legs; purrs with hearts when stroked.
+    - **High Toss Somersault**: Fling Clawd with high velocity for a 360° mid-air spin before bouncing off walls with damping physics (`0.92`).
+    - **Tap to Hop**: Quick tap causes Clawd to hop with a surprise `!`.
+  - **Real-Time Keyboard Typing Cadence Sync**:
+    - Passively synchronizes with your typing speed via `GlobalKeyboardMonitor`. Active typing provides a **1.4× sprint boost**, keeping Clawd running enthusiastically alongside your coding rhythm.
+  - **Mood-Reactive Gauge**: Clawd adapts his speed, expression, and behavior to your highest quota usage:
+    - **Calm** (< 30%): A relaxed stroll at 12 pt/s.
+    - **Brisk** (30%–59%): An upbeat walk at 24 pt/s.
+    - **Tired** (60%–84%): Sluggish pace at 8 pt/s with drooping eyes and animated sweat drops.
+    - **Panic** (85%–99%): Frantic scurrying at 48 pt/s with wide eyes and trailing motion streaks.
+    - **Sleeping** (100% / Depleted): Stops walking peacefully in place, eyes close to horizontal bars `— —`, body color dims to 82% brightness, and `z` bubbles float upward.
+  - **Dynamic Provider Body Tints**: Clawd's body takes on the active provider's brand color (Claude terracotta, Gemini golden amber, Copilot indigo, Antigravity violet, Codex teal, Cursor cyan, DeepSeek cobalt, Kimi sky blue, etc.) with sRGB color safety, gently dimming during sleep.
+  - **Event-Driven Reactions & Particles**:
+    - **Status Degrades**: Body flashes white for 0.12s + an `!` alert particle floats upward.
+    - **Quota Resets / Drops < 100%**: Burst of `✦` sparkle particles + confetti explosion.
+    - **Provider Switches**: Clawd jumps upward in an arc (85 pt) and flips direction to face the new provider.
+    - **Refresh Triggered**: A spinning `?` particle orbits his head for 1.5s.
+  - **Context-Aware Animations**:
+    - **Active Claude Code Session**: Speed multiplied ×1.5 (session sprint) + glowing orange ring beneath feet.
+    - **Night Mode (22:00–04:59)**: Speed reduced ×0.6 + drifting star particles.
+    - **Christmas Theme**: Red pixel Santa hat with white brim and pompom.
 - **Live Multi-Provider Quota Gauges**:
-  - Displays real provider logo icons (Claude, Gemini, Antigravity, GitHub Copilot, Codex, etc.) with rounded styling.
-  - Renders multi-segment provider views matching your menu bar configuration (e.g. `[Logo] Gemini 40% | [Logo] Claude 0%`).
+  - Displays authentic provider logos (Claude, Gemini, Antigravity, GitHub Copilot, Codex, etc.).
+  - Multi-segment provider views matching your menu bar configuration (e.g. `[Logo] Gemini 40% | [Logo] Claude 0%`).
   - High-precision bold monospaced percentage readout with warning indicator (`!`) when quota is critical (≥ 90%).
-  - Sleek progress bars with 100% track reference, adaptive color coding (Blue < 50%, Amber 50%–89%, Alert Red ≥ 90%), and scale tick marks at **50%** and **90%**.
-  - Reset countdown timer (e.g., `2h15` or remaining duration).
-- **One-Tap Access**: Tap anywhere on the quota gauges on the Touch Bar to instantly summon the full ClaudeBar dropdown popover.
+  - Sleek progress bars with 100% track reference, adaptive color coding, and scale tick marks at **50%** and **90%**.
+  - Reset countdown timer (e.g., `2:15`, `35m`, `3d`).
+- **One-Tap Access**: Tap anywhere on the quota gauges on the Touch Bar to instantly summon the full ClaudeBar dropdown popover (`claudebar://open`).
 
-### Enabling or Disabling Touch Bar
+> [!TIP]
+> For detailed architecture, Touch Bar configuration, and customization details, see the [Full Touch Bar Guide](docs/touchbar/TOUCHBAR_GUIDE.md).
 
-You can toggle the persistent Touch Bar on or off at any time from **Settings > General > Touch Bar**:
 
-<p align="center">
-  <img src="docs/screenshots/TouchBar-settings.png" alt="Touch Bar Settings" width="680"/>
-</p>
+## MacBook Notch Live Activity
+
+ClaudeBar can render Claude Code's session and quota state directly in your MacBook notch (Settings > General > Notch Live Activity):
+
+- **Idle Mode**: Displays your selected provider's most depleted quota at a glance.
+- **Active Session Mode**: Displays repository name, elapsed time, and the number of active subagents fanned out.
+- **Permission Alert**: Prominently highlights when Claude Code is waiting for permission in terminal.
+- **Hover Popover**: Hovering expands the notch into a full status view with active session list, quota cards, and quick action buttons.
+- **Virtual Notch**: Displays without a physical notch (or external monitors) automatically receive an elegant virtual notch sized to the menu bar.
+
+> [!NOTE]
+> Read the complete documentation at [docs/features/notch-live-activity.md](docs/features/notch-live-activity.md).
 
 ## Requirements
 
 - macOS 15+
 - Swift 6.2+
-- CLI tools installed for providers you want to monitor:
-  - [Claude CLI](https://claude.ai/code) (`claude`)
-  - [Codex CLI](https://github.com/openai/codex) (`codex`)
-  - [Gemini CLI](https://github.com/google-gemini/gemini-cli) (`gemini`)
-  - [GitHub Copilot](https://github.com/features/copilot) - Configure credentials in Settings
+- Providers and CLI tools you wish to monitor:
+  - [Claude](https://claude.ai/code) - CLI mode (`claude`) or direct OAuth API mode
+  - [Codex](https://github.com/openai/codex) - CLI RPC mode (`codex`) or ChatGPT backend API mode
+  - [Gemini](https://github.com/google-gemini/gemini-cli) - `gemini` CLI
+  - [GitHub Copilot](https://github.com/features/copilot) - Billing API or Internal Copilot API mode
   - [Antigravity](https://antigravity.google) - Auto-detected when running locally
+  - [Cursor](https://cursor.com) - Auto-detected via local SQLite DB and usage API
+  - [AWS Bedrock](https://aws.amazon.com/bedrock/) - AWS SSO profile or IAM credentials
+  - [AWS Kiro](https://kiro.dev) - `kiro-cli` via `uv tool install kiro-cli`
+  - [Kimi](https://www.kimi.com/code/console) - `kimi` CLI mode (recommended) or API cookie mode
+  - [DeepSeek](https://www.deepseek.com) - API key configured in Settings
+  - [Mistral](https://mistral.ai) - Backed by Vibe session logs
+  - [MiniMax](https://www.minimax.io) - Coding Plan API key (International / China)
+  - [Alibaba Coding Plan](https://bailian.console.aliyun.com) - Model Studio API key or browser cookie
   - [Z.ai](https://z.ai/subscribe) - Configure Claude Code with GLM Coding Plan endpoint
-  - [Kimi](https://www.kimi.com/code/console) (`kimi`) - CLI mode (recommended) or API mode (see below)
-  - [Kiro](https://kiro.dev) (`kiro-cli`) - Requires kiro-cli installation (see below)
-  - [Amp](https://ampcode.com) (`amp`) - Auto-detected when CLI is installed
-  - [OpenCode Go](https://opencode.ai/go) (`opencode`) - Tracks OpenCode Go usage windows (5hr/$12, weekly/$30, monthly/$60) via local SQLite DB
-  - [Oh My Pi](https://omp.sh) (`omp`) - Aggregates account usage via `omp usage --json`, showing rate-limit windows and, where reported, capped USD money cards or uncapped spend notes
-  - [Grok Build](https://docs.x.ai) (`grok`) - Tracks xAI credit usage (weekly window + per-product Grok Build / Imagine / Voice limits) using the CLI's local OAuth credentials
+  - [Amp Code](https://ampcode.com) - Auto-detected when `amp` CLI is installed
+  - [OpenCode Go](https://opencode.ai/go) - Local SQLite DB or Zen API key
+  - [Oh My Pi](https://omp.sh) - Aggregates account usage via `omp usage --json`
+  - [Grok Build](https://docs.x.ai) - Tracks xAI credits using CLI OAuth credentials
+  - [Vercel](https://vercel.com) - Token-based quota tracking
+  - [Custom Extensions](docs/features/extensions.md) - Drop custom scripts into `~/.claudebar/extensions/`
 
-### Kimi Setup
+### Provider Setup Guides
+
+<details>
+<summary><strong>Kimi Setup</strong></summary>
 
 Kimi supports two probe modes, configurable in **Settings > Kimi Configuration**:
+- **CLI Mode (Recommended)**: Launches interactive `kimi` and executes `/usage`. Requires `uv tool install kimi-cli` or `pip install kimi-cli`. No Full Disk Access required.
+- **API Mode**: Calls Kimi Connect-RPC directly using browser cookie auth. Requires **Full Disk Access** for ClaudeBar in **System Settings > Privacy & Security > Full Disk Access** (or set `KIMI_AUTH_TOKEN`).
+</details>
 
-**CLI Mode (Recommended)** - Launches the interactive `kimi` CLI and sends `/usage` to fetch quota data. Requires `kimi` CLI installed (`uv tool install kimi-cli`). No Full Disk Access needed.
+<details>
+<summary><strong>AWS Kiro Setup</strong></summary>
 
-**API Mode** - Calls the Kimi API directly using browser cookie authentication. Requires **Full Disk Access** for ClaudeBar to read the `kimi-auth` browser cookie:
-1. Open **System Settings** > **Privacy & Security** > **Full Disk Access**
-2. Toggle **ClaudeBar** on (or click `+` and add it)
-3. Restart ClaudeBar
+Kiro monitors AWS Kiro (formerly CodeWhisperer) usage via `kiro-cli`.
+- **Install**: `uv tool install kiro-cli` or `pip install kiro-cli`
+- **Authenticate**: Run `kiro-cli` and complete the login prompt (or use Kiro IDE).
+</details>
 
-You can also set the `KIMI_AUTH_TOKEN` environment variable to bypass cookie reading in API mode.
+<details>
+<summary><strong>AWS Bedrock Setup</strong></summary>
 
-### Kiro Setup
+Monitors daily spend, token counts, and per-model breakdowns via CloudWatch.
+- Configure AWS SSO profile or environment variables in **Settings > Bedrock**.
+- Select target inference regions (e.g. `us-east-1`, `us-west-2`).
+</details>
 
-Kiro monitors AWS Kiro (formerly CodeWhisperer) usage through the `kiro-cli` command-line tool.
+<details>
+<summary><strong>Alibaba Coding Plan Setup</strong></summary>
 
-**Installation**: `uv tool install kiro-cli` or `pip install kiro-cli`
+Monitors 5-hour session, weekly, and monthly quotas on Alibaba Model Studio / Bailian.
+- Choose region: International (`modelstudio.console.alibabacloud.com`) or China Mainland (`bailian.console.aliyun.com`).
+- Authenticate via API key or browser cookie extraction.
+</details>
 
-**Authentication**: Run `kiro-cli` and follow the login prompts.
+<details>
+<summary><strong>Cursor Setup</strong></summary>
 
-**Kiro IDE Users**: If you use Kiro IDE, simply install kiro-cli. Both share the same authentication, so no additional login is required.
+Automatically detects your active Cursor IDE installation and reads authentication tokens from Cursor's local SQLite database. Displays included requests and on-demand spend.
+</details>
+
+## URL Schemes
+
+ClaudeBar supports the `claudebar://` URL scheme for quick actions from Raycast, Alfred, Touch Bar widgets, or terminal:
+
+| URL Scheme | Action | CLI Example |
+|---|---|---|
+| `claudebar://open` | Toggles the ClaudeBar dropdown popover | `open claudebar://open` |
+| `claudebar://refresh` | Triggers immediate quota refresh for all providers | `open claudebar://refresh` |
+| `claudebar://settings` | Opens the ClaudeBar Settings window | `open claudebar://settings` |
 
 ### Notify! Setup
 
@@ -163,7 +248,7 @@ Full details: [docs/features/notify.md](docs/features/notify.md).
 
 ### Homebrew
 
-Install via [Homebrew](https://brew.sh).
+Install via [Homebrew](https://brew.sh):
 
 ```bash
 brew install --cask claudebar
@@ -243,7 +328,7 @@ After opening in Xcode, SwiftUI previews will work with `Cmd+Option+Return`. The
 
 ## Architecture
 
-> **Full documentation:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+> **Full documentation:** [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md)
 
 ClaudeBar uses a **layered architecture** with `QuotaMonitor` as the single source of truth:
 
@@ -251,12 +336,12 @@ ClaudeBar uses a **layered architecture** with `QuotaMonitor` as the single sour
 |-------|---------|
 | **App** | SwiftUI views consuming domain directly (no ViewModel) |
 | **Domain** | Rich models, `QuotaMonitor`, repository protocols |
-| **Infrastructure** | Probes, storage implementations, adapters |
+| **Infrastructure** | Probes, storage implementations, adapters, drivers |
 
 ### Key Design Decisions
 
 - **Single Source of Truth** - `QuotaMonitor` owns all provider state
-- **Repository Pattern** - Settings and credentials abstracted behind injectable protocols
+- **Repository Pattern** - Settings and credentials abstracted behind injectable protocols (`JSONSettingsRepository`)
 - **Protocol-Based DI** - `@Mockable` protocols enable testability
 - **Chicago School TDD** - Tests verify state changes, not method calls
 - **No ViewModel/AppState** - Views consume domain directly
@@ -272,6 +357,12 @@ Match ClaudeBar's appearance to your terminal. Import any `.itermcolors` file:
 450+ pre-made schemes available at [iTerm2-Color-Schemes](https://github.com/mbadolato/iTerm2-Color-Schemes/tree/master/schemes).
 
 Imported themes are saved in `~/.claudebar/themes/` and persist across restarts.
+
+## User Extensions
+
+Create your own provider monitoring modules by dropping a manifest and script into `~/.claudebar/extensions/`. Extensions can define quota grids, daily usage cards, and automated HTTP health checks.
+
+See [docs/features/extensions.md](docs/features/extensions.md) for full specification and example implementations.
 
 ## Contributing
 
