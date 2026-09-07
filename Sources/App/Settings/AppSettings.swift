@@ -1,101 +1,342 @@
 import Foundation
+import Domain
+import Infrastructure
+import ServiceManagement
 
 /// Observable settings manager for ClaudeBar preferences.
-/// Note: Provider-specific settings (e.g., Copilot credentials) are managed by the providers themselves.
+/// Thin `@Observable` wrapper around `AppSettingsRepository` for SwiftUI reactivity.
+/// All persistence is delegated to the repository (`~/.claudebar/settings.json`).
 @MainActor
 @Observable
 public final class AppSettings {
     public static let shared = AppSettings()
+
+    /// The underlying repository (internal - views access settings through AppSettings properties/methods)
+    private let repository: JSONSettingsRepository
 
     // MARK: - Theme Settings
 
     /// The current theme mode (light, dark, system, christmas)
     public var themeMode: String {
         didSet {
-            UserDefaults.standard.set(themeMode, forKey: Keys.themeMode)
-            // Mark that user has explicitly chosen a theme
+            repository.setThemeMode(themeMode)
             if !isInitializing {
                 userHasChosenTheme = true
             }
-        }
-    }
-    
-    // MARK: - Update Settings
-
-    /// Whether to receive beta updates (default: false)
-    public var receiveBetaUpdates: Bool {
-        didSet {
-            UserDefaults.standard.set(receiveBetaUpdates, forKey: Keys.receiveBetaUpdates)
-            NotificationCenter.default.post(name: .betaUpdatesSettingChanged, object: nil)
         }
     }
 
     /// Whether the user has explicitly chosen a theme (vs auto-enabled Christmas)
     public var userHasChosenTheme: Bool {
         didSet {
-            UserDefaults.standard.set(userHasChosenTheme, forKey: Keys.userHasChosenTheme)
+            repository.setUserHasChosenTheme(userHasChosenTheme)
         }
     }
 
-    /// Track initialization to avoid marking theme as user-chosen during init
-    private var isInitializing = true
+    // MARK: - Display Settings
 
-    // MARK: - Claude API Budget Settings
-
-    /// Whether Claude API budget tracking is enabled
-    public var claudeApiBudgetEnabled: Bool {
+    /// Whether to show quota as remaining, used, or pace-aware.
+    public var usageDisplayMode: UsageDisplayMode {
         didSet {
-            UserDefaults.standard.set(claudeApiBudgetEnabled, forKey: Keys.claudeApiBudgetEnabled)
+            repository.setUsageDisplayMode(usageDisplayMode.rawValue)
         }
     }
 
-    /// The budget threshold for Claude API usage (in dollars)
-    public var claudeApiBudget: Decimal {
+    /// Whether the menu bar label should show a selected quota percentage instead of the icon.
+    public var menuBarPercentageEnabled: Bool {
         didSet {
-            UserDefaults.standard.set(NSDecimalNumber(decimal: claudeApiBudget).doubleValue, forKey: Keys.claudeApiBudget)
+            repository.setMenuBarPercentageEnabled(menuBarPercentageEnabled)
+        }
+    }
+
+    /// Whether the menu bar label should show the compact reset duration for the
+    /// selected quota. Independent of `menuBarPercentageEnabled`; both can be on
+    /// simultaneously (in which case they are joined by " · ").
+    public var menuBarDurationEnabled: Bool {
+        didSet {
+            repository.setMenuBarDurationEnabled(menuBarDurationEnabled)
+        }
+    }
+
+    /// Whether a dual-window menu bar label should render as two stacked
+    /// smaller lines (one per quota window) instead of one long "A | B" line,
+    /// roughly halving the menu bar width it occupies. Opt-in, default off;
+    /// has no effect while only a single quota window is shown.
+    public var menuBarStackedEnabled: Bool {
+        didSet {
+            repository.setMenuBarStackedEnabled(menuBarStackedEnabled)
+        }
+    }
+
+    /// Text size for the stacked menu bar lines. Small is the original 9pt
+    /// rendering and the default; Medium (10pt) and Large (11pt) trade some of
+    /// the inter-line breathing room for legibility. Only consulted while
+    /// `menuBarStackedEnabled` is actually rendering two lines.
+    public var menuBarStackedSize: MenuBarStackedSize {
+        didSet {
+            repository.setMenuBarStackedSize(menuBarStackedSize.rawValue)
+        }
+    }
+
+    /// Provider used for the menu bar percentage label.
+    public var menuBarPercentageProviderId: String {
+        didSet {
+            repository.setMenuBarPercentageProviderId(menuBarPercentageProviderId)
+        }
+    }
+
+    /// Quota key used for the menu bar percentage label.
+    public var menuBarPercentageQuotaKey: String {
+        didSet {
+            repository.setMenuBarPercentageQuotaKey(menuBarPercentageQuotaKey)
+        }
+    }
+
+    /// Optional secondary quota key shown alongside the primary in the menu bar
+    /// (e.g. weekly next to session). Empty string means no secondary window.
+    public var menuBarSecondaryQuotaKey: String {
+        didSet {
+            repository.setMenuBarSecondaryQuotaKey(menuBarSecondaryQuotaKey)
+        }
+    }
+
+    /// Whether to show daily usage report cards (API Cost, Token Usage, Working Time)
+    public var showDailyUsageCards: Bool {
+        didSet {
+            repository.setShowDailyUsageCards(showDailyUsageCards)
+        }
+    }
+
+    // MARK: - Notch Settings
+
+    /// Whether Claude Code session and quota state is drawn into the notch
+    /// (default: false).
+    public var notchEnabled: Bool {
+        didSet {
+            repository.setNotchEnabled(notchEnabled)
+        }
+    }
+
+    // MARK: - Touch Bar Settings
+
+    /// Whether Touch Bar status integration is enabled (default: true).
+    public var touchBarEnabled: Bool {
+        didSet {
+            repository.setTouchBarEnabled(touchBarEnabled)
+        }
+    }
+
+    // MARK: - Notify Settings
+
+    /// Whether quota state is published to a linked Notify! device
+    /// (default: false). The feature sends data to a third party service, so it
+    /// can never come up switched on.
+    public var notifyEnabled: Bool {
+        didSet {
+            repository.setNotifyEnabled(notifyEnabled)
+        }
+    }
+
+    /// Whether the Lock Screen Live Activity is one of the surfaces published.
+    public var notifyLiveActivityEnabled: Bool {
+        didSet {
+            repository.setNotifyLiveActivityEnabled(notifyLiveActivityEnabled)
+        }
+    }
+
+    /// Whether the Lock Screen widget gauge is one of the surfaces published.
+    public var notifyWidgetEnabled: Bool {
+        didSet {
+            repository.setNotifyWidgetEnabled(notifyWidgetEnabled)
+        }
+    }
+
+    /// Whether the Home Screen widget is one of the surfaces published. It
+    /// carries the same content as the Live Activity, and unlike it, it stays.
+    public var notifyScreenWidgetEnabled: Bool {
+        didSet {
+            repository.setNotifyScreenWidgetEnabled(notifyScreenWidgetEnabled)
+        }
+    }
+
+    /// Provider whose quota the widget gauge shows. Empty means "whichever
+    /// quota needs attention most", which is what a glance wants before the
+    /// user has picked anything.
+    public var notifyGaugeProviderId: String {
+        didSet {
+            repository.setNotifyGaugeProviderId(notifyGaugeProviderId)
+        }
+    }
+
+    /// Quota window the widget gauge shows. Empty is automatic, as above.
+    public var notifyGaugeQuotaKey: String {
+        didSet {
+            repository.setNotifyGaugeQuotaKey(notifyGaugeQuotaKey)
+        }
+    }
+
+    // MARK: - Overview Mode Settings
+
+    /// Whether to show all enabled providers at once instead of one at a time
+    public var overviewModeEnabled: Bool {
+        didSet {
+            repository.setOverviewModeEnabled(overviewModeEnabled)
         }
     }
 
     // MARK: - Background Sync Settings
 
-    /// Whether background sync is enabled (default: true)
+    /// Whether background sync is enabled (default: false)
     public var backgroundSyncEnabled: Bool {
         didSet {
-            UserDefaults.standard.set(backgroundSyncEnabled, forKey: Keys.backgroundSyncEnabled)
+            repository.setBackgroundSyncEnabled(backgroundSyncEnabled)
         }
     }
 
     /// Background sync interval in seconds (default: 60)
     public var backgroundSyncInterval: TimeInterval {
         didSet {
-            UserDefaults.standard.set(backgroundSyncInterval, forKey: Keys.backgroundSyncInterval)
+            repository.setBackgroundSyncInterval(backgroundSyncInterval)
         }
     }
 
+    /// The background-refresh cadence (Off / 1 / 5 / 15 min) as a single
+    /// picker-friendly value. Computed over the legacy `backgroundSyncEnabled`
+    /// + `backgroundSyncInterval` pair so `settings.json` stays backward
+    /// compatible — "Off" maps to `backgroundSyncEnabled == false`, the others
+    /// to enabled + 60/300/600/900s. Setting it persists both underlying keys.
+    public var refreshInterval: RefreshInterval {
+        get {
+            RefreshInterval.migrating(
+                enabled: backgroundSyncEnabled,
+                storedSeconds: backgroundSyncInterval
+            )
+        }
+        set {
+            // Set the interval before flipping enabled so anything observing the
+            // change sees the final cadence in a single pass.
+            if let seconds = newValue.seconds {
+                backgroundSyncInterval = TimeInterval(seconds)
+            }
+            backgroundSyncEnabled = newValue.isEnabled
+        }
+    }
 
+    // MARK: - Claude API Budget Settings
+
+    /// Whether Claude API budget tracking is enabled
+    public var claudeApiBudgetEnabled: Bool {
+        didSet {
+            repository.setClaudeApiBudgetEnabled(claudeApiBudgetEnabled)
+        }
+    }
+
+    /// The budget threshold for Claude API usage (in dollars)
+    public var claudeApiBudget: Decimal {
+        didSet {
+            repository.setClaudeApiBudget(NSDecimalNumber(decimal: claudeApiBudget).doubleValue)
+        }
+    }
+
+    // MARK: - Burn Rate Warning Settings
+
+    /// Whether burn rate-based warnings are enabled (default: false, uses absolute thresholds)
+    public var burnRateWarningEnabled: Bool {
+        didSet {
+            repository.setBurnRateWarningEnabled(burnRateWarningEnabled)
+        }
+    }
+
+    /// The burn rate multiplier threshold above which warnings fire (default: 1.5)
+    public var burnRateThreshold: Double {
+        didSet {
+            repository.setBurnRateThreshold(burnRateThreshold)
+        }
+    }
+
+    // MARK: - Update Settings
+
+    /// Whether to receive beta updates (default: false)
+    public var receiveBetaUpdates: Bool {
+        didSet {
+            repository.setReceiveBetaUpdates(receiveBetaUpdates)
+            NotificationCenter.default.post(name: .betaUpdatesSettingChanged, object: nil)
+        }
+    }
+
+    // MARK: - Launch at Login Settings
+
+    /// Whether the app should launch at login (backed by SMAppService, not JSON)
+    public var launchAtLogin: Bool {
+        didSet {
+            guard !isInitializing else { return }
+            do {
+                if launchAtLogin {
+                    try SMAppService.mainApp.register()
+                } else {
+                    try SMAppService.mainApp.unregister()
+                }
+            } catch {
+                launchAtLogin = SMAppService.mainApp.status == .enabled
+            }
+        }
+    }
+
+    // MARK: - Internal
+
+    private var isInitializing = true
 
     // MARK: - Initialization
 
-    private init() {
-        self.userHasChosenTheme = UserDefaults.standard.bool(forKey: Keys.userHasChosenTheme)
-        self.themeMode = UserDefaults.standard.string(forKey: Keys.themeMode) ?? "system"
-        self.claudeApiBudgetEnabled = UserDefaults.standard.bool(forKey: Keys.claudeApiBudgetEnabled)
-        self.claudeApiBudget = Decimal(UserDefaults.standard.double(forKey: Keys.claudeApiBudget))
-        self.receiveBetaUpdates = UserDefaults.standard.bool(forKey: Keys.receiveBetaUpdates)
+    private init(repository: JSONSettingsRepository = .shared) {
+        self.repository = repository
 
-        // Background sync defaults to DISABLED
-        self.backgroundSyncEnabled = UserDefaults.standard.object(forKey: Keys.backgroundSyncEnabled) as? Bool ?? false
-        self.backgroundSyncInterval = UserDefaults.standard.object(forKey: Keys.backgroundSyncInterval) as? TimeInterval ?? 60
+        // Load all values from repository
+        self.themeMode = repository.themeMode()
+        self.userHasChosenTheme = repository.userHasChosenTheme()
+        self.claudeApiBudgetEnabled = repository.claudeApiBudgetEnabled()
+        self.claudeApiBudget = Decimal(repository.claudeApiBudget())
+        self.receiveBetaUpdates = repository.receiveBetaUpdates()
+        self.burnRateWarningEnabled = repository.burnRateWarningEnabled()
+        self.burnRateThreshold = repository.burnRateThreshold()
+        self.showDailyUsageCards = repository.showDailyUsageCards()
+        self.notchEnabled = repository.notchEnabled()
+        self.touchBarEnabled = repository.touchBarEnabled()
+        self.notifyEnabled = repository.isNotifyEnabled()
+        self.notifyLiveActivityEnabled = repository.isNotifyLiveActivityEnabled()
+        self.notifyWidgetEnabled = repository.isNotifyWidgetEnabled()
+        self.notifyScreenWidgetEnabled = repository.isNotifyScreenWidgetEnabled()
+        self.notifyGaugeProviderId = repository.notifyGaugeProviderId()
+        self.notifyGaugeQuotaKey = repository.notifyGaugeQuotaKey()
+        self.overviewModeEnabled = repository.overviewModeEnabled()
+        self.backgroundSyncEnabled = repository.backgroundSyncEnabled()
+        self.backgroundSyncInterval = repository.backgroundSyncInterval()
+        self.menuBarPercentageEnabled = repository.menuBarPercentageEnabled()
+        self.menuBarDurationEnabled = repository.menuBarDurationEnabled()
+        self.menuBarStackedEnabled = repository.menuBarStackedEnabled()
+        // The stored size decodes through the Domain fallback so an unknown
+        // raw value (from a newer build's settings file) renders small
+        // instead of crashing or dropping the label.
+        self.menuBarStackedSize = MenuBarStackedSize(storedRawValue: repository.menuBarStackedSize())
+        self.menuBarPercentageProviderId = repository.menuBarPercentageProviderId()
+        self.menuBarPercentageQuotaKey = repository.menuBarPercentageQuotaKey()
+        self.menuBarSecondaryQuotaKey = repository.menuBarSecondaryQuotaKey()
 
-        // Auto-enable Christmas theme during Dec 24-26 if user hasn't explicitly chosen
+        if let mode = UsageDisplayMode(rawValue: repository.usageDisplayMode()) {
+            self.usageDisplayMode = mode
+        } else {
+            self.usageDisplayMode = .remaining
+        }
+
+        // Launch at login - read from SMAppService (system service, not JSON)
+        self.launchAtLogin = SMAppService.mainApp.status == .enabled
+
         applySeasonalTheme()
-
         self.isInitializing = false
     }
 
     // MARK: - Seasonal Theme
 
-    /// Check if today is within the Christmas period (Dec 24-26)
     public static func isChristmasPeriod(date: Date = Date()) -> Bool {
         let calendar = Calendar.current
         let components = calendar.dateComponents([.month, .day], from: date)
@@ -103,36 +344,42 @@ public final class AppSettings {
         return month == 12 && (24...26).contains(day)
     }
 
-    /// Apply seasonal theme if appropriate
     private func applySeasonalTheme() {
         let isChristmas = Self.isChristmasPeriod()
 
         if isChristmas {
-            // During Christmas: auto-enable if user hasn't explicitly chosen a theme
             if !userHasChosenTheme {
                 themeMode = "christmas"
             }
         } else {
-            // After Christmas: revert to system if still on Christmas theme and user didn't explicitly choose it
             if themeMode == "christmas" && !userHasChosenTheme {
                 themeMode = "system"
-             }
-         }
-     }
- }
-
-// MARK: - UserDefaults Keys
-
-private extension AppSettings {
-    enum Keys {
-        static let themeMode = "themeMode"
-        static let userHasChosenTheme = "userHasChosenTheme"
-        static let claudeApiBudgetEnabled = "claudeApiBudgetEnabled"
-        static let claudeApiBudget = "claudeApiBudget"
-        static let receiveBetaUpdates = "receiveBetaUpdates"
-        static let backgroundSyncEnabled = "backgroundSyncEnabled"
-        static let backgroundSyncInterval = "backgroundSyncInterval"
+            }
+        }
     }
+
+    // MARK: - Provider Settings Access
+
+    /// Access provider-specific settings for reading/writing in Settings UI.
+    /// These are non-observable (loaded into @State) - only app-level settings are @Observable.
+    public var provider: ProviderSettingsRepository { repository }
+    public var claude: ClaudeSettingsRepository { repository }
+    public var codex: CodexSettingsRepository { repository }
+    public var kimi: KimiSettingsRepository { repository }
+    public var copilot: CopilotSettingsRepository { repository }
+    public var zai: ZaiSettingsRepository { repository }
+    public var bedrock: BedrockSettingsRepository { repository }
+    public var minimax: MiniMaxSettingsRepository { repository }
+    public var deepseek: DeepSeekSettingsRepository { repository }
+    public var alibaba: AlibabaSettingsRepository { repository }
+    public var vercel: VercelSettingsRepository { repository }
+    public var hook: HookSettingsRepository { repository }
+    public var notify: NotifySettingsRepository { repository }
+
+    /// Extension config repository for dynamic extension provider settings.
+    public let extensionConfig: any ExtensionConfigRepository = JSONExtensionConfigRepository(
+        settingsStore: .shared
+    )
 }
 
 // MARK: - Notification Names

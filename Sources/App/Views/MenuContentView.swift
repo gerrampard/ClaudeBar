@@ -9,19 +9,24 @@ import Sparkle
 /// Uses the pluggable theme system for consistent styling across all themes.
 struct MenuContentView: View {
     let monitor: QuotaMonitor
+    let sessionMonitor: SessionMonitor
     let quotaAlerter: QuotaAlerter
+    var onHookSettingsChanged: ((Bool) -> Void)?
 
     @Environment(\.appTheme) private var theme
     @Environment(\.colorScheme) private var colorScheme
     #if ENABLE_SPARKLE
     @Environment(\.sparkleUpdater) private var sparkleUpdater
     #endif
+    @Environment(\.openWindow) private var openWindow
     @State private var isHoveringRefresh = false
     @State private var animateIn = false
-    @State private var showSettings = false
     @State private var showSharePass = false
     @State private var settings = AppSettings.shared
     @State private var hasRequestedNotificationPermission = false
+    @State private var pillsOverflow = false
+    @State private var pillsContentWidth: CGFloat = 0
+    @State private var pillsViewportWidth: CGFloat = 0
 
     /// The currently selected provider ID (from monitor, which is @Observable)
     private var selectedProviderId: String {
@@ -52,35 +57,49 @@ struct MenuContentView: View {
             // Theme overlay (e.g., snowfall for Christmas)
             theme.overlayView
 
-            if showSettings {
-                // Settings View
-                SettingsContentView(showSettings: $showSettings, monitor: monitor)
-            } else {
-                // Main Content
-                VStack(spacing: 0) {
-                    // Header with branding
-                    headerView
-                        .padding(.horizontal, 16)
-                        .padding(.top, 16)
-                        .padding(.bottom, 12)
+            // Main Content
+            VStack(spacing: 0) {
+                // Header with branding
+                headerView
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+                    .padding(.bottom, 12)
 
-                    // Provider Pills
+                // Provider Pills (hidden in overview mode)
+                if !settings.overviewModeEnabled {
                     providerPills
                         .padding(.horizontal, 16)
                         .padding(.bottom, 16)
+                }
 
-                    // Main Content Area - no scroll, dynamic height
+                // Session Indicator (shown when Claude Code is active)
+                if let session = sessionMonitor.activeSession {
+                    SessionIndicatorView(session: session)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 8)
+                }
+
+                // Main Content Area — hugs its content, but caps at the
+                // screen height and scrolls beyond it (aggregating
+                // providers can show a dozen cards; the action bar must
+                // never be pushed off-screen).
+                ScrollView(.vertical, showsIndicators: true) {
                     VStack(spacing: 12) {
                         metricsContent
                     }
                     .padding(.horizontal, 16)
                     .padding(.bottom, 16)
-
-                    // Bottom Action Bar
-                    actionBar
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 12)
                 }
+                .frame(maxHeight: contentMaxHeight)
+                // Recreate the scroll view when the shown content
+                // changes, so a newly selected provider starts at the
+                // top instead of inheriting the previous scroll offset.
+                .id(settings.overviewModeEnabled ? "overview" : monitor.selectedProviderId)
+
+                // Bottom Action Bar
+                actionBar
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 12)
             }
 
             // Share Pass Overlay
@@ -92,21 +111,34 @@ struct MenuContentView: View {
                     }
                 }
             }
+
+            // Share Pass Error Overlay
+            if let claudeProvider = selectedProvider as? ClaudeProvider,
+               let passError = claudeProvider.passError {
+                SharePassErrorOverlay(message: passError.localizedDescription) {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        claudeProvider.clearPassError()
+                    }
+                }
+            }
         }
         .frame(width: 400)
         .fixedSize(horizontal: false, vertical: true)
         .clipShape(RoundedRectangle(cornerRadius: 16))
+        .background(TouchBarWindowAccessor())
+        .touchBar {
+            ClaudeBarNativeTouchBar(monitor: monitor)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .hookSettingsChanged)) { notification in
+            let enabled = notification.userInfo?["enabled"] as? Bool ?? false
+            onHookSettingsChanged?(enabled)
+        }
         .task {
             // Request alert permission once (after app run loop is active)
             if !hasRequestedNotificationPermission {
                 hasRequestedNotificationPermission = true
                 let granted = await quotaAlerter.requestPermission()
                 AppLog.notifications.info("Alert permission request result: \(granted ? "granted" : "denied")")
-
-                // Start background sync on first app launch (only once)
-                if settings.backgroundSyncEnabled && !monitor.isMonitoring {
-                    startBackgroundSync()
-                }
             }
 
             // Show header and tabs immediately
@@ -114,56 +146,37 @@ struct MenuContentView: View {
                 animateIn = true
             }
             // Then fetch data in background
-            await refresh(providerId: selectedProviderId)
+            if settings.overviewModeEnabled {
+                await refreshAllEnabled()
+            } else {
+                await refresh(providerId: selectedProviderId)
+            }
 
             // Check for updates when menu opens (no UI unless update found)
             #if ENABLE_SPARKLE
-            sparkleUpdater?.checkForUpdatesInBackground()
+            if sparkleUpdater?.automaticallyChecksForUpdates == true {
+                sparkleUpdater?.checkForUpdatesInBackground()
+            }
             #endif
         }
         .onChange(of: selectedProviderId) { _, newProviderId in
-            // Refresh when user switches provider
+            // Refresh immediately when the user switches provider while the
+            // dropdown is open. Periodic background refresh is owned by the
+            // app-lifetime loop in ClaudeBarApp, which restarts itself when the
+            // selected or menu-bar provider changes.
             Task {
                 await refresh(providerId: newProviderId)
             }
         }
-        .onChange(of: settings.backgroundSyncEnabled) { _, enabled in
-            // React to background sync toggle
-            if enabled {
-                startBackgroundSync()
-            } else {
-                stopBackgroundSync()
-            }
-        }
-        .onChange(of: settings.backgroundSyncInterval) { _, _ in
-            // Restart sync with new interval
-            if settings.backgroundSyncEnabled {
-                restartBackgroundSync()
-            }
-        }
     }
 
-    // MARK: - Background Sync Control
-
-    private func startBackgroundSync() {
-        let interval = Duration.seconds(settings.backgroundSyncInterval)
-        AppLog.monitor.info("Starting background sync (interval: \(settings.backgroundSyncInterval)s)")
-        Task {
-            let stream = monitor.startMonitoring(interval: interval)
-            for await _ in stream {
-                // Events handled internally by QuotaMonitor
-            }
-        }
-    }
-
-    private func stopBackgroundSync() {
-        AppLog.monitor.info("Stopping background sync")
-        monitor.stopMonitoring()
-    }
-
-    private func restartBackgroundSync() {
-        stopBackgroundSync()
-        startBackgroundSync()
+    /// Upper bound for the scrollable content region — see
+    /// `PopoverContentHeight` for the policy and its tests.
+    private var contentMaxHeight: CGFloat {
+        PopoverContentHeight.maxHeight(
+            visibleScreenHeight: NSScreen.main?.visibleFrame.height ?? 800,
+            overviewMode: settings.overviewModeEnabled
+        )
     }
 
     // MARK: - Background Orbs
@@ -212,10 +225,23 @@ struct MenuContentView: View {
 
     private var headerView: some View {
         HStack(spacing: 12) {
-            // Custom Provider Icon - changes based on selected provider
+            // Custom Provider Icon - shows AppLogo in overview mode, provider icon otherwise
             // Avoid animation on provider icon to prevent constraint update loops in MenuBarExtra
             ZStack {
-                ProviderIconView(providerId: selectedProviderId, size: 38)
+                if settings.overviewModeEnabled, let logo = NSImage(named: "AppLogo") {
+                    Image(nsImage: logo)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 38, height: 38)
+                        .clipShape(Circle())
+                        .overlay(
+                            Circle()
+                                .stroke(theme.accentPrimary.opacity(0.3), lineWidth: 2)
+                        )
+                        .shadow(color: theme.accentPrimary.opacity(0.15), radius: 3, y: 1)
+                } else {
+                    ProviderIconView(providerId: selectedProviderId, size: 38)
+                }
 
                 // Christmas star sparkle overlay
                 if theme.id == "christmas" {
@@ -262,9 +288,24 @@ struct MenuContentView: View {
         }
     }
 
-    /// Status of the currently selected provider
-    private var selectedProviderStatus: QuotaStatus {
-        selectedProvider?.snapshot?.overallStatus ?? .healthy
+    /// Status of the currently selected provider, nil when it has no snapshot.
+    private var selectedProviderStatus: QuotaStatus? {
+        guard let snapshot = selectedProvider?.snapshot else { return nil }
+        if settings.burnRateWarningEnabled {
+            return snapshot.paceAwareOverallStatus(burnRateThreshold: settings.burnRateThreshold)
+        }
+        return snapshot.overallStatus
+    }
+
+    /// What the header pill says. A provider that failed to probe reads as
+    /// "UNAVAILABLE" rather than borrowing a green "HEALTHY" it has no data
+    /// for (#259).
+    private var selectedProviderBadge: ProviderBadgeState {
+        ProviderBadgeState(
+            isSyncing: isSelectedProviderSyncing,
+            quotaStatus: selectedProviderStatus,
+            hasError: selectedProvider?.lastError != nil
+        )
     }
 
     /// Whether the selected provider is currently syncing
@@ -273,7 +314,7 @@ struct MenuContentView: View {
     }
 
     private var statusBadge: some View {
-        let statusColor = theme.statusColor(for: selectedProviderStatus)
+        let statusColor = selectedProviderBadge.badgeColor(theme)
 
         return HStack(spacing: 6) {
             // Animated pulse dot
@@ -299,8 +340,7 @@ struct MenuContentView: View {
     }
 
     private var statusText: String {
-        if isSelectedProviderSyncing { return "Syncing..." }
-        return selectedProviderStatus.badgeText
+        selectedProviderBadge.badgeText
     }
 
     /// Help text for settings button, includes update info if available
@@ -335,24 +375,68 @@ struct MenuContentView: View {
                     }
                 }
             }
+            .background(HorizontalScrollBooster())
+            .overlay {
+                GeometryReader { geo in
+                    Color.clear.preference(key: PillsContentWidthKey.self, value: geo.size.width)
+                }
+            }
+            .fixedSize(horizontal: true, vertical: false)
+        }
+        .background(
+            GeometryReader { geo in
+                Color.clear.preference(key: PillsViewportWidthKey.self, value: geo.size.width)
+            }
+        )
+        .onPreferenceChange(PillsContentWidthKey.self) { contentWidth in
+            updatePillsOverflow(contentWidth: contentWidth)
+        }
+        .onPreferenceChange(PillsViewportWidthKey.self) { viewportWidth in
+            updatePillsOverflow(viewportWidth: viewportWidth)
+        }
+        .mask {
+            HStack(spacing: 0) {
+                Rectangle().fill(.white)
+                if pillsOverflow {
+                    LinearGradient(
+                        colors: [.white, .clear],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                    .frame(width: 28)
+                }
+            }
         }
         .opacity(animateIn ? 1 : 0)
         .offset(y: animateIn ? 0 : 10)
         .animation(.easeOut(duration: 0.5).delay(0.1), value: animateIn)
     }
 
+    private func updatePillsOverflow(contentWidth: CGFloat? = nil, viewportWidth: CGFloat? = nil) {
+        if let contentWidth { pillsContentWidth = contentWidth }
+        if let viewportWidth { pillsViewportWidth = viewportWidth }
+        let overflows = pillsViewportWidth > 0 && pillsContentWidth > pillsViewportWidth + 1
+        if pillsOverflow != overflows {
+            pillsOverflow = overflows
+        }
+    }
+
     // MARK: - Metrics Content
 
     @ViewBuilder
     private var metricsContent: some View {
-        if let provider = selectedProvider, let snapshot = provider.snapshot {
+        if settings.overviewModeEnabled {
+            let providers = monitor.enabledProviders
+            if providers.isEmpty {
+                emptyState
+            } else {
+                overviewContent(providers: providers)
+            }
+        } else if let provider = selectedProvider, let snapshot = provider.snapshot {
             VStack(spacing: 12) {
-                // Account info card - show if email OR organization is available
                 if let displayName = snapshot.accountEmail ?? snapshot.accountOrganization {
                     accountCard(displayName: displayName, snapshot: snapshot)
                 }
-
-                // Stats Grid - Wrapped style with large numbers
                 statsGrid(snapshot: snapshot)
             }
             .opacity(animateIn ? 1 : 0)
@@ -363,6 +447,71 @@ struct MenuContentView: View {
             emptyState
         }
     }
+
+    private func overviewContent(providers: [any AIProvider]) -> some View {
+        // Scrolling is owned by the shared middle-region ScrollView in
+        // `body`; nesting another vertical ScrollView here would break
+        // height negotiation and swallow gestures.
+        VStack(spacing: 12) {
+            ForEach(Array(providers.enumerated()), id: \.element.id) { index, provider in
+                if index > 0 {
+                    Divider()
+                        .background(theme.glassBorder)
+                }
+                providerSection(provider: provider)
+            }
+        }
+        .opacity(animateIn ? 1 : 0)
+        .animation(.easeOut(duration: 0.5).delay(0.2), value: animateIn)
+    }
+
+    private func providerSection(provider: any AIProvider) -> some View {
+        VStack(spacing: 8) {
+            providerSectionHeader(provider: provider)
+
+            if let snapshot = provider.snapshot {
+                statsGrid(snapshot: snapshot)
+            } else if provider.isSyncing {
+                LoadingSpinnerView()
+            } else {
+                compactErrorState(provider: provider)
+            }
+        }
+    }
+
+    private func providerSectionHeader(provider: any AIProvider) -> some View {
+        HStack(spacing: 8) {
+            ProviderIconView(providerId: provider.id, size: 20, showGlow: false)
+
+            Text(provider.name)
+                .font(.system(size: 13, weight: .semibold, design: theme.fontDesign))
+                .foregroundStyle(theme.textPrimary)
+
+            Spacer()
+
+            let status = provider.snapshot?.overallStatus ?? .healthy
+            Text(provider.isSyncing ? "Syncing..." : status.badgeText)
+                .badge(theme.statusColor(for: status))
+        }
+        .padding(.horizontal, 4)
+    }
+
+    private func compactErrorState(provider: any AIProvider) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 12))
+                .foregroundStyle(theme.statusWarning)
+
+            Text(provider.lastError?.localizedDescription ?? "Unavailable")
+                .font(.system(size: 11, weight: .medium, design: theme.fontDesign))
+                .foregroundStyle(theme.textTertiary)
+                .lineLimit(1)
+
+            Spacer()
+        }
+        .padding(.vertical, 4)
+    }
+
 
     private func accountCard(displayName: String, snapshot: UsageSnapshot) -> some View {
         HStack(spacing: 10) {
@@ -415,21 +564,145 @@ struct MenuContentView: View {
         .glassCard(cornerRadius: 12, padding: 10)
     }
 
+    /// Collapsed state of quota-group sections, keyed by `QuotaGroup.id`.
+    /// Ephemeral by design: reopening the popover starts fully expanded.
+    @State private var collapsedQuotaGroups: Set<String> = []
+
+    /// Sections for aggregating providers (e.g. Oh My Pi): one collapsible
+    /// block per upstream account, so ten flat cards become scannable.
+    @ViewBuilder
+    private func quotaGroupSections(snapshot: UsageSnapshot) -> some View {
+        let groups = snapshot.quotaGroups
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(Array(groups.enumerated()), id: \.element.id) { groupIndex, group in
+                let baseDelay = Double(groups.prefix(groupIndex).reduce(0) { $0 + $1.quotas.count }) * 0.08
+                quotaGroupSection(group, baseDelay: baseDelay)
+            }
+        }
+    }
+
+    private func quotaGroupSection(_ group: QuotaGroup, baseDelay: Double) -> some View {
+        // Note-only sections (accounts without usable quota data) have no
+        // cards to collapse; the note renders inline in the header.
+        let isNoteOnly = group.quotas.isEmpty
+        let isCollapsed = !isNoteOnly && collapsedQuotaGroups.contains(group.id)
+        let sharedReset = group.quotas.sharedResetDescription()
+        return VStack(alignment: .leading, spacing: 8) {
+            Button {
+                withAnimation(.easeOut(duration: 0.15)) {
+                    collapsedQuotaGroups = isCollapsed
+                        ? collapsedQuotaGroups.subtracting([group.id])
+                        : collapsedQuotaGroups.union([group.id])
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    if !isNoteOnly {
+                        Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(theme.textTertiary)
+                    }
+
+                    Text((group.title ?? "Other").uppercased())
+                        .font(.system(size: 9, weight: .semibold, design: theme.fontDesign))
+                        .foregroundStyle(theme.textSecondary)
+                        .tracking(0.5)
+
+                    Spacer(minLength: 4)
+
+                    if case .headerInline(let note) = group.notePlacement {
+                        Text(note)
+                            .font(.system(size: 9, weight: .medium, design: theme.fontDesign))
+                            .foregroundStyle(theme.textTertiary)
+                    } else if isNoteOnly {
+                        Text("No usage data")
+                            .font(.system(size: 9, weight: .medium, design: theme.fontDesign))
+                            .foregroundStyle(theme.textTertiary)
+                    } else {
+                        // Collapsed sections keep their headline number visible.
+                        if isCollapsed, let lowest = group.lowestQuota {
+                            Text("\(Int(lowest.percentRemaining))% left")
+                                .font(.system(size: 9, weight: .semibold, design: theme.fontDesign))
+                                .foregroundStyle(theme.textTertiary)
+                        }
+
+                        Text(group.worstStatus.badgeText)
+                            .badge(theme.statusColor(for: group.worstStatus))
+                    }
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(isNoteOnly)
+
+            if !isNoteOnly && !isCollapsed {
+                // A note attached to a quota-bearing section (the same
+                // account also reported "No usage" somewhere) is shown as
+                // its own row - never silently dropped.
+                if case .row(let note) = group.notePlacement {
+                    Text(note)
+                        .font(.system(size: 9, weight: .medium, design: theme.fontDesign))
+                        .foregroundStyle(theme.textTertiary)
+                }
+
+                if let sharedReset {
+                    sharedResetRow(sharedReset)
+                }
+
+                TwoColumnCardGrid(
+                    items: Array(group.quotas.enumerated()),
+                    id: \.element.quotaType
+                ) { entry in
+                    WrappedStatCard(
+                        quota: entry.element,
+                        delay: baseDelay + Double(entry.offset) * 0.08,
+                        showsReset: sharedReset == nil
+                    )
+                }
+            }
+        }
+    }
+
+    private func sharedResetRow(_ text: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "clock.fill")
+                .font(.system(size: 8))
+
+            Text(text)
+                .font(.system(size: 10, weight: .medium, design: theme.fontDesign))
+
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(theme.textTertiary)
+        .padding(.horizontal, 4)
+    }
+
     @ViewBuilder
     private func statsGrid(snapshot: UsageSnapshot) -> some View {
         VStack(spacing: 10) {
-            // Show quota cards if quotas exist (Max/Pro accounts)
-            if !snapshot.quotas.isEmpty {
-                LazyVGrid(
-                    columns: [
-                        GridItem(.flexible(), spacing: 10),
-                        GridItem(.flexible(), spacing: 10)
-                    ],
-                    spacing: 10
-                ) {
-                    ForEach(Array(snapshot.quotas.enumerated()), id: \.element.quotaType) { index, quota in
-                        WrappedStatCard(quota: quota, delay: Double(index) * 0.08)
-                    }
+            // Grouped sections cover aggregating providers even when every
+            // account lacks quota data (note-only sections must still render).
+            if snapshot.hasQuotaGroups {
+                quotaGroupSections(snapshot: snapshot)
+            }
+
+            if !snapshot.hasQuotaGroups, !snapshot.quotas.isEmpty {
+                let sharedReset = snapshot.quotas.sharedResetDescription()
+                if let sharedReset {
+                    sharedResetRow(sharedReset)
+                }
+            }
+
+            if !snapshot.hasQuotaGroups, !snapshot.quotas.isEmpty {
+                let sharedReset = snapshot.quotas.sharedResetDescription()
+                TwoColumnCardGrid(
+                    items: Array(snapshot.quotas.enumerated()),
+                    id: \.element.quotaType
+                ) { entry in
+                    WrappedStatCard(
+                        quota: entry.element,
+                        delay: Double(entry.offset) * 0.08,
+                        showsReset: sharedReset == nil
+                    )
                 }
             }
 
@@ -442,6 +715,40 @@ struct MenuContentView: View {
             // Show Bedrock usage card if available
             if let bedrockUsage = snapshot.bedrockUsage {
                 BedrockUsageCard(usage: bedrockUsage, delay: Double(snapshot.quotas.count) * 0.08)
+            }
+
+            // Show daily usage cards from JSONL session analysis (e.g., Claude Code)
+            // Controlled via Settings toggle or ~/.claudebar/settings.json
+            if settings.showDailyUsageCards, let report = snapshot.dailyUsageReport {
+                let baseDelay = Double(snapshot.quotas.count + 1) * 0.08
+                HStack(spacing: 10) {
+                    DailyUsageCardView(metric: .cost, report: report, delay: baseDelay)
+                        .frame(maxWidth: .infinity)
+                    DailyUsageCardView(metric: .tokens, report: report, delay: baseDelay + 0.08)
+                        .frame(maxWidth: .infinity)
+                }
+                if report.today.workingTime > 0 || report.previous.workingTime > 0 {
+                    DailyUsageCardView(metric: .workingTime, report: report, delay: baseDelay + 0.16)
+                }
+            }
+
+            // Show extension metrics cards (from extension probes)
+            if let extensionMetrics = snapshot.extensionMetrics?.filter({ $0.group == nil }),
+               !extensionMetrics.isEmpty {
+                let metricBaseDelay = Double(snapshot.quotas.count + 2) * 0.08
+                TwoColumnCardGrid(
+                    items: Array(extensionMetrics.enumerated()),
+                    id: \.element.label
+                ) { entry in
+                    ExtensionMetricCardView(metric: entry.element, delay: metricBaseDelay + Double(entry.offset) * 0.08)
+                }
+            }
+
+            // Show custom web card if URL is configured for this provider
+            if let urlString = settings.provider.customCardURL(forProvider: snapshot.providerId),
+               let url = URL(string: urlString) {
+                let cardDelay = Double(snapshot.quotas.count + 2) * 0.08
+                CustomWebCardView(url: url, delay: cardDelay)
             }
         }
         .padding(.top, 4)
@@ -467,9 +774,12 @@ struct MenuContentView: View {
                 .font(.system(size: 14, weight: .bold, design: theme.fontDesign))
                 .foregroundStyle(theme.textPrimary)
 
-            Text("Install CLI or check configuration")
+            // Show actual error message if available, otherwise generic message
+            Text(selectedProvider?.lastError?.localizedDescription ?? "Install CLI or check configuration")
                 .font(.system(size: 11, weight: .semibold, design: theme.fontDesign))
                 .foregroundStyle(theme.textTertiary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 16)
         }
         .frame(height: 140)
         .frame(maxWidth: .infinity)
@@ -493,14 +803,24 @@ struct MenuContentView: View {
             .keyboardShortcut("d")
 
             // Refresh Button
-            let isCurrentlyRefreshing = selectedProvider?.isSyncing == true
+            let isCurrentlyRefreshing = settings.overviewModeEnabled
+                ? monitor.enabledProviders.contains { $0.isSyncing }
+                : selectedProvider?.isSyncing == true
             WrappedActionButton(
                 icon: isCurrentlyRefreshing ? "arrow.trianglehead.2.counterclockwise.rotate.90" : "arrow.clockwise",
                 label: isCurrentlyRefreshing ? "Syncing" : "Refresh",
                 gradient: theme.accentGradient,
                 isLoading: isCurrentlyRefreshing
             ) {
-                Task { await refresh() }
+                // An explicit refresh is the moment a user who just installed a
+                // CLI expects it to be picked up, so drop the cached lookups
+                // instead of waiting for their TTL to lapse.
+                BinaryLocator.invalidateCaches()
+                if settings.overviewModeEnabled {
+                    Task { await refreshAllEnabled() }
+                } else {
+                    Task { await refresh(providerId: selectedProviderId) }
+                }
             }
             .keyboardShortcut("r")
 
@@ -536,8 +856,10 @@ struct MenuContentView: View {
 
             // Settings Button with update indicator
             Button {
-                // Avoid window resize animation glitches in MenuBarExtra.
-                showSettings = true
+                // Settings live in a standalone window. The app is an
+                // LSUIElement, so activate it to bring the window forward.
+                openWindow(id: "settings")
+                NSApp.activate(ignoringOtherApps: true)
             } label: {
                 ZStack {
                     Circle()
@@ -585,9 +907,23 @@ struct MenuContentView: View {
 
     // MARK: - Actions
 
-    /// Refresh the currently selected provider (for button action)
-    private func refresh() async {
-        await refresh(providerId: selectedProviderId)
+    /// Refresh all enabled providers concurrently
+    private func refreshAllEnabled() async {
+        await withTaskGroup(of: Void.self) { group in
+            // The `isSyncing` guard reads main-actor provider state, so evaluate
+            // it here on the main actor (this closure inherits the caller's
+            // isolation). Each child task then awaits `refresh()`, whose heavy
+            // probe work still suspends off-main, keeping the refreshes concurrent.
+            for provider in monitor.enabledProviders where !provider.isSyncing {
+                group.addTask {
+                    do {
+                        try await provider.refresh()
+                    } catch {
+                        // Provider stores error in lastError
+                    }
+                }
+            }
+        }
     }
 
     /// Refresh a specific provider by ID
@@ -621,7 +957,8 @@ struct MenuContentView: View {
                 showSharePass = true
             }
         } catch {
-            // Provider stores error in lastError
+            // Provider stores the error in passError, which the popover surfaces
+            // as SharePassErrorOverlay — a failed click is never silent.
         }
     }
 }
@@ -677,18 +1014,149 @@ struct ProviderPill: View {
     }
 }
 
+// MARK: - Provider Pill Overflow
+
+private struct PillsContentWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat { 0 }
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+private struct PillsViewportWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat { 0 }
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+// MARK: - Two-Column Card Grid
+
+/// Non-lazy two-column grid for popover cards.
+///
+/// The popover shows at most a few dozen lightweight cards, so laziness buys
+/// nothing — and `LazyVGrid` actively hurts: lazy containers report an
+/// estimated height and correct it as cells materialize, and inside the
+/// popover's vertical `ScrollView` each correction rewrites the scroll offset
+/// mid-gesture. Scrolling upward trembled, snapped back, and only got through
+/// with an exaggerated flick. An eager grid hands the scroll view exact
+/// content heights up front, so dragging stays smooth in both directions.
+///
+/// Layout matches the `LazyVGrid` it replaces: two equal flexible columns,
+/// `spacing` between rows and columns, cells center-aligned per row, and a
+/// lone card in the last row keeps column width instead of stretching.
+struct TwoColumnCardGrid<Item, ID: Hashable, Cell: View>: View {
+    let items: [Item]
+    let id: KeyPath<Item, ID>
+    var spacing: CGFloat = 10
+    @ViewBuilder let cell: (Item) -> Cell
+
+    init(
+        items: [Item],
+        id: KeyPath<Item, ID>,
+        spacing: CGFloat = 10,
+        @ViewBuilder cell: @escaping (Item) -> Cell
+    ) {
+        self.items = items
+        self.id = id
+        self.spacing = spacing
+        self.cell = cell
+    }
+
+    /// A row's identity: its position plus the ids of the cards it holds.
+    ///
+    /// Keying a row on its leading card's id alone (the original form) is not
+    /// unique: providers can report two cards of the same `QuotaType` — one
+    /// `.session` per account, say — and two rows then claim the same `ForEach`
+    /// id. Duplicate ids leave SwiftUI free to recycle one row's backing layer
+    /// for another's content, which is one way cards end up drawing garbled
+    /// (see #272). The position keeps ids unique whatever the cards contain,
+    /// and the card ids keep a row's identity tied to what it actually shows.
+    private struct RowID: Hashable {
+        let index: Int
+        let leading: ID
+        let trailing: ID?
+    }
+
+    private var rows: [(id: RowID, leading: Item, trailing: Item?)] {
+        stride(from: 0, to: items.count, by: 2).map { start in
+            let trailing = start + 1 < items.count ? items[start + 1] : nil
+            return (
+                id: RowID(
+                    index: start,
+                    leading: items[start][keyPath: id],
+                    trailing: trailing?[keyPath: id]
+                ),
+                leading: items[start],
+                trailing: trailing
+            )
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: spacing) {
+            ForEach(rows, id: \.id) { row in
+                HStack(spacing: spacing) {
+                    cell(row.leading)
+                        .frame(maxWidth: .infinity)
+                    if let trailing = row.trailing {
+                        cell(trailing)
+                            .frame(maxWidth: .infinity)
+                    } else {
+                        // Hold the empty slot so a lone final card keeps
+                        // column width instead of stretching across the row.
+                        Color.clear
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 0)
+                            .accessibilityHidden(true)
+                    }
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Wrapped Stat Card
 
 struct WrappedStatCard: View {
     let quota: UsageQuota
     let delay: Double
+    var showsReset: Bool = true
 
     @Environment(\.appTheme) private var theme
     @State private var isHovering = false
     @State private var animateProgress = false
+    @State private var settings = AppSettings.shared
+
+    private var displayMode: UsageDisplayMode {
+        settings.usageDisplayMode
+    }
+
+    /// Effective display mode: falls back to .used when pace is unknown
+    private var effectiveDisplayMode: UsageDisplayMode {
+        if displayMode == .pace && quota.pace == .unknown {
+            return .used
+        }
+        return displayMode
+    }
 
     private var statusColor: Color {
         theme.statusColor(for: quota.status)
+    }
+
+    private var isCappedSpend: Bool {
+        quota.dollarUsed != nil && quota.dollarCap != nil
+    }
+
+    private var valueCaption: String {
+        if isCappedSpend { return "Spent" }
+        if quota.isDollarBased { return "Remaining" }
+        return effectiveDisplayMode.displayLabel
+    }
+
+    /// The color used for the pace label/number
+    private var paceColor: Color {
+        quota.pace.displayColor
     }
 
     var body: some View {
@@ -701,7 +1169,7 @@ struct WrappedStatCard: View {
                         .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(statusColor)
 
-                    Text(quota.quotaType.displayName.uppercased())
+                    Text((quota.compactTitle ?? quota.quotaType.displayName).uppercased())
                         .font(.system(size: 8, weight: .medium, design: theme.fontDesign))
                         .foregroundStyle(theme.textSecondary)
                         .tracking(0.3)
@@ -709,49 +1177,102 @@ struct WrappedStatCard: View {
 
                 Spacer(minLength: 4)
 
-                // Status badge - fixed size, won't wrap
-                Text(quota.status.badgeText)
-                    .badge(statusColor)
+                // Status badge - pace mode shows pace badge, others show status
+                if effectiveDisplayMode == .pace {
+                    Text(quota.pace.displayName.uppercased())
+                        .badge(paceColor)
+                } else {
+                    Text(quota.status.badgeText)
+                        .badge(statusColor)
+                }
             }
 
-            // Large percentage number with "Remaining" label (end-aligned)
+            // Large value display with label (end-aligned).
+            //
+            // The headline number deliberately carries no
+            // `.contentTransition(.numericText())`: that modifier hands the
+            // digits to a separate morphing text layer, and those layers are
+            // what users see come back mirrored after a refresh (#272) — the
+            // flipped fields are the ones whose value just changed. A number
+            // that reads correctly is worth more than a rolling animation.
             HStack(alignment: .firstTextBaseline) {
-                HStack(alignment: .firstTextBaseline, spacing: 1) {
-                    Text("\(Int(quota.percentRemaining))")
-                        .font(.system(size: 32, weight: .bold, design: theme.fontDesign))
+                if let dollarUsed = quota.formattedDollarUsed,
+                   let dollarCap = quota.formattedDollarCap {
+                    HStack(alignment: .firstTextBaseline, spacing: 2) {
+                        Text(dollarUsed)
+                            .font(.system(size: 20, weight: .heavy, design: theme.fontDesign))
+                            .foregroundStyle(theme.textPrimary)
+
+                        Text("of \(dollarCap)")
+                            .font(.system(size: 9, weight: .semibold, design: theme.fontDesign))
+                            .foregroundStyle(theme.textSecondary)
+                    }
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .layoutPriority(1)
+                } else if let dollarText = quota.formattedDollarRemaining {
+                    Text(dollarText)
+                        .font(.system(size: 18, weight: .bold, design: theme.fontDesign))
                         .foregroundStyle(theme.textPrimary)
-                        .contentTransition(.numericText())
+                } else {
+                    HStack(alignment: .firstTextBaseline, spacing: 1) {
+                        Text("\(Int(quota.displayPercent(mode: effectiveDisplayMode)))")
+                            .font(.system(size: 26, weight: .bold, design: theme.fontDesign))
+                            .foregroundStyle(effectiveDisplayMode == .pace ? paceColor : theme.textPrimary)
 
-                    Text("%")
-                        .font(.system(size: 16, weight: .medium, design: theme.fontDesign))
-                        .foregroundStyle(theme.textTertiary)
+                        Text("%")
+                            .font(.system(size: 13, weight: .medium, design: theme.fontDesign))
+                            .foregroundStyle(effectiveDisplayMode == .pace ? paceColor.opacity(0.7) : theme.textTertiary)
+                    }
                 }
 
-                Spacer()
+                Spacer(minLength: 4)
 
-                Text("Remaining")
-                    .font(.system(size: 12, weight: .medium, design: theme.fontDesign))
-                    .foregroundStyle(theme.textTertiary)
+                Text(valueCaption)
+                    .font(.system(size: isCappedSpend ? 10 : 12, weight: .medium, design: theme.fontDesign))
+                    .fixedSize()
+                    .foregroundStyle(effectiveDisplayMode == .pace ? paceColor.opacity(0.8) : theme.textTertiary)
             }
 
-            // Progress bar with gradient
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    // Track
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(theme.progressTrack)
+            // Progress bar with gradient and pace tick
+            VStack(spacing: 1) {
+                GeometryReader { geo in
+                    let progressPercent = quota.displayProgressPercent(mode: effectiveDisplayMode)
+                    ZStack(alignment: .leading) {
+                        // Track
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(theme.progressTrack)
 
-                    // Fill
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(theme.progressGradient(for: quota.percentRemaining))
-                        .frame(width: animateProgress ? geo.size.width * quota.percentRemaining / 100 : 0)
-                        .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(delay + 0.2), value: animateProgress)
+                        // Fill (clamp width to 0-100%)
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(theme.progressGradient(for: quota.percentRemaining))
+                            .frame(width: animateProgress ? geo.size.width * max(0, min(100, progressPercent)) / 100 : 0)
+                            .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(delay + 0.2), value: animateProgress)
+                    }
+                }
+                .frame(height: 5)
+
+                // Expected pace tick mark
+                if let expectedPercent = quota.expectedProgressPercent(mode: effectiveDisplayMode) {
+                    GeometryReader { geo in
+                        let tickX = geo.size.width * max(0, min(100, expectedPercent)) / 100
+                        Path { path in
+                            path.move(to: CGPoint(x: tickX - 3, y: 4))
+                            path.addLine(to: CGPoint(x: tickX + 3, y: 4))
+                            path.addLine(to: CGPoint(x: tickX, y: 0))
+                            path.closeSubpath()
+                        }
+                        .fill(theme.textTertiary)
+                        .opacity(animateProgress ? 1 : 0)
+                        .animation(.easeIn(duration: 0.3).delay(delay + 0.5), value: animateProgress)
+                    }
+                    .frame(height: 5)
                 }
             }
-            .frame(height: 5)
+            .help(quota.paceTickHelp(mode: effectiveDisplayMode) ?? "")
 
-            // Reset info
-            if let resetText = quota.resetText ?? quota.resetDescription {
+            // Reset info (hidden when the grid hoisted a shared countdown)
+            if showsReset, let resetText = quota.resetTimestampDescription ?? quota.resetText ?? quota.resetDescription {
                 HStack(spacing: 3) {
                     Image(systemName: "clock.fill")
                         .font(.system(size: 7))
@@ -782,6 +1303,11 @@ struct WrappedStatCard: View {
     }
 
     private var iconName: String {
+        let title = (quota.compactTitle ?? quota.quotaType.displayName).lowercased()
+        if title.contains("build") { return "hammer.fill" }
+        if title.contains("chat") { return "bubble.left.fill" }
+        if title.contains("imagine") { return "sparkles" }
+
         switch quota.quotaType {
         case .session: return "bolt.fill"
         case .weekly: return "calendar.badge.clock"
@@ -897,6 +1423,86 @@ struct VisualEffectBlur: NSViewRepresentable {
     func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
         nsView.material = material
         nsView.blendingMode = blendingMode
+    }
+}
+
+// MARK: - Horizontal Scroll Booster
+
+/// Converts vertical mouse wheel scroll events to horizontal scrolling.
+/// Trackpads natively produce horizontal gestures, but mouse scroll wheels only
+/// generate vertical deltas — this bridges the gap for horizontal ScrollViews.
+///
+/// Uses `NSEvent.addLocalMonitorForEvents` to intercept scroll events at the
+/// app level before they reach the NSScrollView, which would otherwise ignore
+/// vertical deltas in a horizontal-only scroll view.
+struct HorizontalScrollBooster: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        context.coordinator.view = view
+        context.coordinator.startMonitoring()
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    static func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) {
+        coordinator.stopMonitoring()
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    class Coordinator {
+        var monitor: Any?
+        weak var view: NSView?
+
+        func startMonitoring() {
+            monitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
+                guard let self,
+                      let view = self.view,
+                      let scrollView = view.enclosingScrollView else {
+                    return event
+                }
+
+                // Only act on events over this scroll view
+                let point = scrollView.convert(event.locationInWindow, from: nil)
+                guard scrollView.bounds.contains(point) else {
+                    return event
+                }
+
+                // Only convert predominantly vertical scrolls
+                guard abs(event.scrollingDeltaY) > abs(event.scrollingDeltaX) else {
+                    return event
+                }
+
+                guard let cgEvent = event.cgEvent?.copy() else {
+                    return event
+                }
+
+                // Swap vertical → horizontal
+                cgEvent.setDoubleValueField(
+                    .scrollWheelEventDeltaAxis2,
+                    value: cgEvent.getDoubleValueField(.scrollWheelEventDeltaAxis1)
+                )
+                cgEvent.setDoubleValueField(.scrollWheelEventDeltaAxis1, value: 0)
+
+                cgEvent.setIntegerValueField(
+                    .scrollWheelEventPointDeltaAxis2,
+                    value: cgEvent.getIntegerValueField(.scrollWheelEventPointDeltaAxis1)
+                )
+                cgEvent.setIntegerValueField(.scrollWheelEventPointDeltaAxis1, value: 0)
+
+                return NSEvent(cgEvent: cgEvent) ?? event
+            }
+        }
+
+        func stopMonitoring() {
+            if let monitor {
+                NSEvent.removeMonitor(monitor)
+            }
+            monitor = nil
+        }
     }
 }
 
@@ -1041,7 +1647,6 @@ struct BedrockUsageCard: View {
                     Text(usage.formattedTotalCost)
                         .font(.system(size: 36, weight: .bold, design: theme.fontDesign))
                         .foregroundStyle(theme.textPrimary)
-                        .contentTransition(.numericText())
                 }
 
                 Spacer()

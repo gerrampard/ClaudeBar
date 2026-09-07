@@ -6,6 +6,7 @@ Package.resolved
 *.xcodeproj
 *.xcworkspace
 Derived/
+DerivedData/
 
 # Xcode user data
 xcuserdata/
@@ -13,3 +14,6 @@ xcuserdata/
 # Build artifacts
 build/
 .serena/
+
+# Personal Claude Code settings (per-project, never commit)
+.claude/settings.local.json

@@ -29,12 +29,11 @@ permissions:
 env:
   APP_NAME: ClaudeBar
   BUNDLE_ID: com.tddworks.claudebar
-  SWIFT_VERSION: "6.2"
 
 jobs:
   release:
     name: Build, Sign, Notarize & Release
-    runs-on: macos-15
+    runs-on: macos-26
 
     steps:
       - name: Checkout
@@ -42,10 +41,11 @@ jobs:
         with:
           fetch-depth: 0  # Full history for accurate build number
 
-      - name: Setup Swift
-        uses: SwiftyLab/setup-swift@latest
-        with:
-          swift-version: ${{ env.SWIFT_VERSION }}
+      # No explicit Swift toolchain setup: use the runner's bundled Xcode, the
+      # same toolchain Tuist builds its macro prebuilts (SwiftSyntax) against.
+      # Installing a separate toolchain via SwiftyLab/setup-swift drifted out of
+      # sync with those prebuilts and broke the build ("SwiftSyntax was created
+      # for incompatible target").
 
       - name: Install Tuist
         run: brew install tuist
@@ -104,6 +104,7 @@ jobs:
       - name: Generate Xcode Project
         run: |
           tuist generate --no-open
+          ./scripts/fix-swiftterm-metal.sh
           echo "=== Available schemes ==="
           xcodebuild -workspace ClaudeBar.xcworkspace -list
 
@@ -302,6 +303,7 @@ jobs:
           if [ -z "$NOTES" ]; then
             NOTES="Bug fixes and improvements."
             echo "::warning::No changelog entry found for v$VERSION, using default message"
+            echo "used_fallback=true" >> $GITHUB_OUTPUT
           fi
 
           # Store in environment file for multiline support
@@ -386,6 +388,35 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Promote CHANGELOG
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          ./scripts/promote-changelog.sh "$VERSION" "$(date +%Y-%m-%d)"
+          # Sync fallback release notes into the newly promoted [VERSION] section
+          if [ "${{ steps.changelog.outputs.used_fallback }}" = "true" ]; then
+            awk -v ver="$VERSION" '
+              $0 ~ ("^## \\[" ver "\\] - ") { in_ver=1; print; next }
+              in_ver && /[^[:space:]]/ && !/^---$/ { has_content=1 }
+              in_ver && /^---$/ {
+                if (!has_content) {
+                  print "### Changed"
+                  print "- Bug fixes and improvements."
+                  print ""
+                }
+                in_ver=0
+              }
+              in_ver && /^## \[/ { in_ver=0 }
+              { print }
+            ' CHANGELOG.md > CHANGELOG.tmp && mv CHANGELOG.tmp CHANGELOG.md
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git diff --cached --quiet \
+            && echo "No CHANGELOG changes to commit" \
+            || git commit -m "chore(changelog): promote [Unreleased] to v$VERSION"
+          git push origin HEAD:main
+
       - name: Generate Sparkle Appcast
         if: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish_appcast) || github.event_name == 'push' }}
         env:
@@ -394,8 +425,8 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/${NOTARIZED_ZIP}"
 
-          # Find sign_update tool
-          SIGN_UPDATE=$(find .build -name "sign_update" -path "*/bin/*" | head -1)
+          # Find sign_update tool (Tuist puts dependencies in Tuist/.build)
+          SIGN_UPDATE=$(find Tuist/.build -name "sign_update" -path "*/Sparkle/bin/*" | head -1)
 
           if [ -z "$SIGN_UPDATE" ]; then
             echo "Warning: sign_update not found, skipping appcast generation"

@@ -6,25 +6,35 @@ on:
   pull_request:
     branches: [main, develop]
 
+
 jobs:
   build:
     name: Build and Verify
-    runs-on: macos-15
+    runs-on: macos-26
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Swift
-        uses: SwiftyLab/setup-swift@latest
-        with:
-          swift-version: "6.2"
+      # No explicit Swift toolchain setup: use the runner's bundled Xcode, the
+      # same toolchain Tuist builds its macro prebuilts (SwiftSyntax) against.
+      # Installing a separate toolchain via SwiftyLab/setup-swift drifted out of
+      # sync with those prebuilts and broke the Release build ("SwiftSyntax was
+      # created for incompatible target"). Mirrors the passing tests.yml.
 
-      - name: Resolve Dependencies
-        run: swift package resolve
+      - name: Install Tuist
+        run: brew install --cask tuist
+
+      - name: Install Dependencies
+        run: tuist install
+
+      - name: Generate Project
+        run: |
+          tuist generate --no-open
+          ./scripts/fix-swiftterm-metal.sh
 
       - name: Build Debug
-        run: swift build
+        run: xcodebuild build -scheme ClaudeBar -workspace ClaudeBar.xcworkspace -destination 'platform=macOS,arch=arm64'
 
       - name: Build Release
-        run: swift build -c release
+        run: xcodebuild build -scheme ClaudeBar -workspace ClaudeBar.xcworkspace -destination 'platform=macOS,arch=arm64' -configuration Release
