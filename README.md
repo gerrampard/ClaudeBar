@@ -1,4 +1,4 @@
-# ClaudeBar (with Touch Bar)
+# ClaudeBar
 
 [![Build](https://github.com/tddworks/ClaudeBar/actions/workflows/build.yml/badge.svg)](https://github.com/tddworks/ClaudeBar/actions/workflows/build.yml)
 [![Tests](https://github.com/tddworks/ClaudeBar/actions/workflows/tests.yml/badge.svg)](https://github.com/tddworks/ClaudeBar/actions/workflows/tests.yml)
@@ -54,7 +54,7 @@ Some companies support ClaudeBar's open source development through [GitHub Spons
 - **Automatic Adaptation** - System theme follows your macOS appearance; Christmas auto-enables during the holiday season
 - **Visual Status Indicators** - Color-coded progress bars (green/yellow/red) show quota health
 - **System Notifications** - Get alerted when quota status changes to warning or critical
-- **Touch Bar Integration** - Persistent MacBook Touch Bar widget with real-time multi-provider gauges, progress bars, and an interactive pixel mascot ([learn more](#claudebar-with-touch-bar))
+- **Touch Bar Integration** - Persistent MacBook Touch Bar widget with real-time multi-provider gauges, progress bars, and an interactive pixel mascot ([learn more](#touch-bar-integration))
 - **Notify! iPhone Publishing** - Push quota state to your iPhone via [Notify!](https://getnotifyapp.com) on three surfaces: a Lock Screen Live Activity showing up to six quota windows, a Home Screen widget carrying that same content but staying put, and a Lock Screen widget gauge for one chosen quota (off by default, see below)
 - **Auto-Refresh** - Automatically updates quotas at configurable intervals
 - **Keyboard Shortcuts** - Quick access with `⌘D` (Dashboard) and `⌘R` (Refresh)
@@ -71,12 +71,12 @@ Some companies support ClaudeBar's open source development through [GitHub Spons
 > [!TIP]
 > You can also enable **Burn Rate Warnings** in **Settings > General** to trigger alerts based on your real-time consumption velocity against remaining time rather than fixed percentage cutoffs.
 
-## ClaudeBar with Touch Bar
+## Touch Bar Integration
 
-ClaudeBar features native, system-wide Touch Bar integration for MacBook Pro models equipped with an Apple Touch Bar (including M1/M2 and Intel). Inspired by [`tpklo/claude-usage-touchbar`](https://github.com/tpklo/claude-usage-touchbar), this runs 100% natively inside ClaudeBar—requiring **zero third-party apps** (no BetterTouchTool or MTMR required).
+ClaudeBar features native, system-wide Touch Bar integration for MacBook Pro models equipped with an Apple Touch Bar (including M1/M2 and Intel). This runs 100% natively inside ClaudeBar—requiring **zero third-party apps** (no BetterTouchTool or MTMR required).
 
 <p align="center">
-  <img src="docs/screenshots/TouchBar-preview.png" alt="ClaudeBar with Touch Bar" width="100%"/>
+  <img src="docs/screenshots/TouchBar-preview.gif" alt="ClaudeBar Touch Bar Preview" width="100%"/>
 </p>
 
 ### Key Touch Bar Features
@@ -84,25 +84,48 @@ ClaudeBar features native, system-wide Touch Bar integration for MacBook Pro mod
 - **Always Visible System-Wide (`placement: 0`)**: Uses macOS system-modal function bar presentation. The widget remains persistently visible across all full-screen windows and apps, automatically re-asserting on app switching and system unlock while keeping your system Escape key and Control Strip media/volume controls intact.
 - **Interactive Pixel Mascot (Clawd)**:
   - An animated 20×20 retro creature pacing along an illuminated ground line.
+  - **Autonomous Antics System**: Spontaneous antics and tricks occur as Clawd patrols:
+    - **The Zoomies**: High-speed sprint at 95 pt/s with trailing smoke streaks, finishing with a quick panting rest.
+    - **Skateboard Shredder**: Drops a mini skateboard underfoot and zips across the Touch Bar at 55 pt/s with spark particles.
+    - **Smooth Moonwalk**: Glides backward while facing forward with sparkling footsteps (`✦`).
+    - **Trip & Roll**: Hilariously stumbles and face-plants with X-eyes, then scrambles up sheepishly with an `!` particle.
+    - **Acrobatics & Stunts**: High-arc backflips, upside-down headspin breakdancing with star bursts, and wave-like worm crawls.
+    - **Playful Props**: Floats with a red balloon until it pops (`*POP*`), casts a fishing line for diamonds/tokens (`🪙`/`💎`), chases and munches fluttering pixel bugs (`🐛`/`🐝`), sweeps the floor with a broom, downs an espresso cup (`☕`) for an energy sprint, or drops down for push-ups (`💪`).
+  - **Thought Bubble & Kaomoji System**:
+    - Adaptive thought bubbles float beside Clawd at eye level (intelligently switching left or right based on walking direction and boundary clearance).
+    - Randomly expresses thoughts with expressive Kaomojis: `(ง'̀-'́)ง`, `(ಠ_ಠ)`, `(⊙_⊙)`, `( ^ω^ )`, `(>_<)`, `(╯°□°)╯`, `(^o^)/` and cute icons: `☕`, `💡`, `♥`, `♪`, `🔥`, `🚀`, `💬`, `⚡`.
+    - Periodically drops collectible gifts on the ground line: `🎁`, `🍕`, `💎`, `⭐`, `🪙`.
+  - **Ultra Panic Mode (Quota ≥ 95%)**:
+    - Full-body micro-jitter screen shake, screaming open mouth with alternating wide eyes, and rapid sputtering steam (`♨`) and flame (`!`) particles.
+  - **Confetti Celebration**:
+    - Multi-colored confetti explosion (`🎉 YAY!`) bursts across the bar whenever your quota resets or improves.
+  - **RGB Gamer Mode Easter Egg**:
+    - Periodic 3.5-second rainbow hue-cycling easter egg across Clawd's entire body.
+  - **Direct Touch Interaction & Physics**:
+    - **Laser Pointer Chase**: Tap anywhere on empty space on the Touch Bar to cast a glowing red laser dot (`🔴`); Clawd turns around and excitedly sprints to catch it!
+    - **Tickle Mode**: Tap and hold Clawd to make him giggle with smiling eyes (`^ ^`) and floating hearts (`♥`).
+    - **High-Five**: When Clawd raises his hand waiting (`✋ Tap!`), tap his hand to trigger a `✦ BAM! ✦` celebration!
+    - **Belly Rub**: Flips onto back wiggling legs; purrs with hearts when stroked.
+    - **High Toss Somersault**: Fling Clawd with high velocity for a 360° mid-air spin before bouncing off walls with damping physics (`0.92`).
+    - **Tap to Hop**: Quick tap causes Clawd to hop with a surprise `!`.
+  - **Real-Time Keyboard Typing Cadence Sync**:
+    - Passively synchronizes with your typing speed via `GlobalKeyboardMonitor`. Active typing provides a **1.4× sprint boost**, keeping Clawd running enthusiastically alongside your coding rhythm.
   - **Mood-Reactive Gauge**: Clawd adapts his speed, expression, and behavior to your highest quota usage:
     - **Calm** (< 30%): A relaxed stroll at 12 pt/s.
     - **Brisk** (30%–59%): An upbeat walk at 24 pt/s.
     - **Tired** (60%–84%): Sluggish pace at 8 pt/s with drooping eyes and animated sweat drops.
     - **Panic** (85%–99%): Frantic scurrying at 48 pt/s with wide eyes and trailing motion streaks.
-    - **Sleeping** (100% / Depleted): Stops walking peacefully in place, eyes close to horizontal bars `— —`, and `zzz` bubbles float upward.
-  - **Active Patrol Behavior**: Clawd stays awake and continuously patrols the Touch Bar as long as quota is under 100%.
-  - **Global Keyboard Activity Monitor**: Typing on your Mac keyboard wakes Clawd up or keeps him energized while you code.
-  - **Dynamic Provider Body Tints**: Clawd's body takes on the active provider's brand color (Claude terracotta, Gemini amber, Copilot indigo, Antigravity violet, Codex teal, Cursor cyan, DeepSeek cobalt, Kimi sky blue, etc.) with sRGB color safety, gently dimming during sleep.
+    - **Sleeping** (100% / Depleted): Stops walking peacefully in place, eyes close to horizontal bars `— —`, body color dims to 82% brightness, and `z` bubbles float upward.
+  - **Dynamic Provider Body Tints**: Clawd's body takes on the active provider's brand color (Claude terracotta, Gemini golden amber, Copilot indigo, Antigravity violet, Codex teal, Cursor cyan, DeepSeek cobalt, Kimi sky blue, etc.) with sRGB color safety, gently dimming during sleep.
   - **Event-Driven Reactions & Particles**:
-    - **Status Degrades**: Body flashes white for 0.12s + an `!` particle floats upward.
-    - **Quota Resets / Drops < 100%**: Burst of `✦` sparkle particles and Clawd immediately wakes up.
+    - **Status Degrades**: Body flashes white for 0.12s + an `!` alert particle floats upward.
+    - **Quota Resets / Drops < 100%**: Burst of `✦` sparkle particles + confetti explosion.
     - **Provider Switches**: Clawd jumps upward in an arc (85 pt) and flips direction to face the new provider.
     - **Refresh Triggered**: A spinning `?` particle orbits his head for 1.5s.
   - **Context-Aware Animations**:
     - **Active Claude Code Session**: Speed multiplied ×1.5 (session sprint) + glowing orange ring beneath feet.
     - **Night Mode (22:00–04:59)**: Speed reduced ×0.6 + drifting star particles.
     - **Christmas Theme**: Red pixel Santa hat with white brim and pompom.
-  - **Direct Touch Interaction & Physics**: Tap to jump, touch and drag Clawd anywhere on the bar, or flick him with realistic velocity and friction decay (`0.92` damping). Built-in boundary intelligence ensures Clawd turns around smoothly before reaching the quota progress bars.
 - **Live Multi-Provider Quota Gauges**:
   - Displays authentic provider logos (Claude, Gemini, Antigravity, GitHub Copilot, Codex, etc.).
   - Multi-segment provider views matching your menu bar configuration (e.g. `[Logo] Gemini 40% | [Logo] Claude 0%`).
@@ -110,18 +133,10 @@ ClaudeBar features native, system-wide Touch Bar integration for MacBook Pro mod
   - Sleek progress bars with 100% track reference, adaptive color coding, and scale tick marks at **50%** and **90%**.
   - Reset countdown timer (e.g., `2:15`, `35m`, `3d`).
 - **One-Tap Access**: Tap anywhere on the quota gauges on the Touch Bar to instantly summon the full ClaudeBar dropdown popover (`claudebar://open`).
-- **External Integrations**: Exports real-time status to `~/.claudebar/status.json` for users who prefer embedding widgets in BetterTouchTool or MTMR using `scripts/touchbar_status.py`.
 
 > [!TIP]
-> For detailed setup instructions, MTMR/BTT configurations, and customization details, see the [Full Touch Bar Guide](docs/touchbar/TOUCHBAR_GUIDE.md).
+> For detailed architecture, Touch Bar configuration, and customization details, see the [Full Touch Bar Guide](docs/touchbar/TOUCHBAR_GUIDE.md).
 
-### Enabling or Disabling Touch Bar
-
-You can toggle the persistent Touch Bar on or off at any time from **Settings > General > Touch Bar**:
-
-<p align="center">
-  <img src="docs/screenshots/TouchBar-settings.png" alt="Touch Bar Settings" width="680"/>
-</p>
 
 ## MacBook Notch Live Activity
 
